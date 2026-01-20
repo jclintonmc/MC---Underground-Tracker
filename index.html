@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <title>Underground Linear FT Tracker</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
 <style>
 :root{
@@ -20,7 +20,14 @@ h1{margin:0;font-size:28px}
 label{font-size:12px;color:var(--muted)}
 input,select{width:100%;padding:11px;border-radius:12px;border:1px solid var(--border);background:#020617;color:var(--text)}
 .datewrap{display:flex;gap:8px;align-items:center}
-.cal{width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:#1f2937;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.cal{
+  width:44px;height:44px;border-radius:12px;
+  border:1px solid var(--border);
+  background:#1f2937;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:18px;
+  user-select:none;
+}
 .btn{padding:11px 20px;border-radius:14px;border:none;cursor:pointer}
 .primary{background:var(--primary);color:white}
 .success{background:var(--success);color:white}
@@ -36,198 +43,454 @@ th:first-child,td:first-child{text-align:left}
 .del{background:#7f1d1d;color:white;border:none;border-radius:10px;padding:6px 10px;cursor:pointer}
 .mode-box{background:#020617;border:1px solid var(--border);border-radius:14px;padding:12px}
 .mode-box .weights{display:flex;gap:8px;margin-top:8px}
-.cost-manager{margin-top:14px;padding:16px;border-radius:14px;background:#020617;border:1px solid #1f2937;display:none}
+.cost-manager{margin-top:14px;padding:16px;border-radius:14px;background:#020617;border:1px solid #1f2937}
+.small-note{font-size:12px;color:var(--muted);margin-top:10px}
 </style>
 </head>
 
 <body>
 <div class="card">
 
-<!-- HEADER + MODE -->
-<div class="row" style="align-items:flex-start">
-  <div style="flex:1">
-    <h1>Underground Linear FT Tracker</h1>
-    <div class="subtitle">Production + Activity-Distributed Progress Tracking</div>
-  </div>
-
-  <div class="mode-box" style="min-width:320px">
-    <label>Entry Mode</label>
-    <select id="mode">
-      <option value="manual">Manual Input</option>
-      <option value="weighted">Weighted Split</option>
-    </select>
-    <div class="weights">
-      <input id="wTest" value="8" readonly>
-      <input id="wDig" value="42" readonly>
-      <input id="wLay" value="25" readonly>
-      <input id="wBack" value="25" readonly>
+  <div class="row" style="align-items:flex-start">
+    <div style="flex:1">
+      <h1>Underground Linear FT Tracker</h1>
+      <div class="subtitle">Production + Activity-Distributed Progress Tracking</div>
     </div>
-    <div style="font-size:11px;color:#94a3b8;margin-top:4px">Dig / Lay / Backfill %</div>
-  </div>
-</div>
 
-<!-- ENTRY -->
-<div class="row" style="margin-top:14px">
-  <div class="col">
-    <label>Date</label>
-    <div class="datewrap">
-      <input type="date" id="date">
-      <div class="cal" onclick="date.showPicker()">📅</div>
+    <div class="mode-box" style="min-width:320px">
+      <label>Entry Mode</label>
+      <select id="mode">
+        <option value="manual">Manual Input</option>
+        <option value="weighted">Weighted Split</option>
+      </select>
+      <div class="weights">
+        <input id="wTest" readonly>
+        <input id="wDig" readonly>
+        <input id="wLay" readonly>
+        <input id="wBack" readonly>
+      </div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px">Dig / Lay / Backfill %</div>
     </div>
   </div>
-  <div class="col"><label>Project</label><input id="project"></div>
-  <div class="col"><label>Crew Lead</label><input id="crew"></div>
-  <div class="col">
-    <label>Cost Code</label>
-    <div style="display:flex;gap:8px">
-      <select id="cost"><option>CIV-100</option></select>
-      <button class="btn gray" onclick="toggleCostMgr()">⚙</button>
+
+  <div class="row" style="margin-top:14px">
+    <div class="col">
+      <label>Date</label>
+      <div class="datewrap">
+        <input type="date" id="date">
+        <div class="cal" onclick="openDatePicker('date')">📅</div>
+      </div>
+    </div>
+
+    <div class="col">
+      <label>Project</label>
+      <input id="project" onchange="applyProjectDefault()">
+    </div>
+
+    <div class="col">
+      <label>Crew Lead</label>
+      <input id="crew">
+    </div>
+
+    <div class="col">
+      <label>Cost Code</label>
+      <div style="display:flex;gap:8px">
+        <select id="cost" onchange="applyCostCode()"></select>
+        <button class="btn gray" onclick="toggleManager()">⚙</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- COST MANAGER -->
-<div id="costMgr" class="cost-manager">
-  <label>Add Cost Code</label>
-  <div class="row">
-    <input id="newCost" placeholder="CIV-200">
-    <button class="btn gray" onclick="addCost()">Add</button>
+  <div id="manager" class="cost-manager" style="display:none">
+    <div class="row">
+      <div class="col"><label>Cost Code</label><input id="ccCode"></div>
+      <div class="col"><label>Dig %</label><input id="ccDig" type="number"></div>
+      <div class="col"><label>Lay %</label><input id="ccLay" type="number"></div>
+      <div class="col"><label>Backfill %</label><input id="ccBack" type="number"></div>
+      <div class="col"><label>Tested %</label><input id="ccTest" type="number"></div>
+      <div class="col"><label>Default Project</label><input id="ccProject"></div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary" onclick="saveCostCode()">Save / Update</button>
+      <button class="btn danger" onclick="deleteCostCode()">Delete</button>
+    </div>
   </div>
-</div>
 
-<!-- LF INPUT -->
-<div class="row" style="margin-top:14px">
-  <div class="col"><label>Dig LF</label><input type="number" id="dig"></div>
-  <div class="col"><label>Lay LF</label><input type="number" id="lay"></div>
-  <div class="col"><label>Backfill LF</label><input type="number" id="back"></div>
-  <div class="col"><label>Tested LF</label><input type="number" id="test"></div>
-</div>
-
-<!-- ACTIONS -->
-<div class="row" style="margin-top:18px">
-  <button class="btn primary" onclick="save()">Save Day</button>
-  <button class="btn success" onclick="exportCSV()">Export Filtered</button>
-</div>
-
-<!-- FILTER BAR -->
-<div class="row" style="margin-top:22px">
-  <div class="col"><label>Filter Project</label><input id="fProject"></div>
-  <div class="col"><label>Filter Crew Lead</label><input id="fCrew"></div>
-  <div class="col"><label>Start Date</label><input type="date" id="fStart"></div>
-  <div class="col"><label>End Date</label><input type="date" id="fEnd"></div>
-  <div class="col" style="max-width:160px">
-    <button class="btn gray" onclick="applyFilters()">Apply Filter</button>
+  <div class="row" style="margin-top:14px">
+    <div class="col"><label id="digLabel">Dig LF</label><input type="number" id="dig"></div>
+    <div class="col"><label>Lay LF</label><input type="number" id="lay"></div>
+    <div class="col"><label>Backfill LF</label><input type="number" id="back"></div>
+    <div class="col"><label>Tested LF</label><input type="number" id="test"></div>
   </div>
+
+  <div class="row" style="margin-top:18px">
+    <button class="btn primary" onclick="save()">Save Day</button>
+    <button class="btn success" onclick="exportCSV()">Export Filtered</button>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="row" style="margin-top:22px">
+    <div class="col">
+      <label>Filter Project</label>
+      <select id="filterProject"></select>
+    </div>
+
+    <div class="col">
+      <label>Filter Crew Lead</label>
+      <input id="filterCrew" placeholder="Crew Lead Name">
+    </div>
+
+    <div class="col">
+      <label>Start Date</label>
+      <div class="datewrap">
+        <input type="date" id="filterStart">
+        <div class="cal" onclick="openDatePicker('filterStart')">📅</div>
+      </div>
+    </div>
+
+    <div class="col">
+      <label>End Date</label>
+      <div class="datewrap">
+        <input type="date" id="filterEnd">
+        <div class="cal" onclick="openDatePicker('filterEnd')">📅</div>
+      </div>
+    </div>
+
+    <div class="col" style="max-width:160px">
+      <button class="btn gray" style="margin-top:22px" onclick="applyFilters()">Apply Filter</button>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><span>Total Dig</span><strong id="kDig">0</strong></div>
+    <div class="kpi"><span>Total Lay</span><strong id="kLay">0</strong></div>
+    <div class="kpi"><span>Total Backfill</span><strong id="kBack">0</strong></div>
+    <div class="kpi"><span>Total Physical LF</span><strong id="kPhys">0</strong></div>
+    <div class="kpi"><span>Total Progress LF</span><strong id="kWip">0</strong></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th><th>Project</th><th>Crew Lead</th><th>Cost</th>
+        <th>Dig</th><th>Lay</th><th>Backfill</th><th>Tested</th>
+        <th>Total LF</th><th>WIP</th><th>Delete</th>
+      </tr>
+    </thead>
+    <tbody id="log"></tbody>
+    <tfoot>
+      <tr>
+        <td colspan="7" style="text-align:right;font-weight:600">TOTAL LINEAR FT</td>
+        <td id="tTotalLF" style="font-weight:700">0</td>
+        <td></td><td></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="small-note" id="fireStatus"></div>
 </div>
 
-<!-- KPIs -->
-<div class="kpis">
-  <div class="kpi"><span>Total Dig</span><strong id="kDig">0</strong></div>
-  <div class="kpi"><span>Total Lay</span><strong id="kLay">0</strong></div>
-  <div class="kpi"><span>Total Backfill</span><strong id="kBack">0</strong></div>
-  <div class="kpi"><span>Total Physical LF</span><strong id="kPhys">0</strong></div>
-  <div class="kpi"><span>Total Progress LF</span><strong id="kWip">0</strong></div>
-</div>
-
-<!-- TABLE -->
-<table>
-<thead>
-<tr>
-  <th>Date</th><th>Project</th><th>Crew Lead</th><th>Cost</th>
-  <th>Dig</th><th>Lay</th><th>Backfill</th><th>Tested</th>
-  <th>Total LF</th><th>WIP</th><th>Delete</th>
-</tr>
-</thead>
-<tbody id="log"></tbody>
-<tfoot>
-<tr>
-  <td colspan="8" style="text-align:right;font-weight:600">TOTAL LINEAR FT</td>
-  <td id="tTotal">0</td><td></td><td></td>
-</tr>
-</tfoot>
-</table>
-
-</div>
-
-<!-- FIRESTORE REALTIME (SAFE) -->
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } 
-from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import {
+    getFirestore, collection, addDoc, deleteDoc, doc,
+    onSnapshot, query, orderBy
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const app = initializeApp({
-  apiKey: "AIzaSyChNb8zTdAPahDCgTah1W0CRpMS7S9wpI8",
-  authDomain: "mc-underground-tracker.firebaseapp.com",
-  projectId: "mc-underground-tracker"
-});
-const db = getFirestore(app);
-const ref = collection(db,"entries");
+  // -----------------------------
+  // Safe date-picker helper
+  // -----------------------------
+  window.openDatePicker = function(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    try {
+      if (typeof el.showPicker === "function") el.showPicker();
+      else { el.focus(); el.click(); }
+    } catch(e) {
+      el.focus(); el.click();
+    }
+  };
 
-let data=[];
+  // -----------------------------
+  // Firebase config
+  // -----------------------------
+  const firebaseConfig = {
+    apiKey: "AIzaSyChNb8zTdAPahDCgTah1W0CRpMS7S9wpI8",
+    authDomain: "mc-underground-tracker.firebaseapp.com",
+    projectId: "mc-underground-tracker",
+    storageBucket: "mc-underground-tracker.firebasestorage.app",
+    messagingSenderId: "214694975194",
+    appId: "1:214694975194:web:de814a7e23074faa37b7e3"
+  };
 
-date.value=new Date().toISOString().split("T")[0];
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const ref = collection(db, "entries");
 
-onSnapshot(ref,(snap)=>{
-  data=snap.docs.map(d=>({id:d.id,...d.data()}));
-  applyFilters();
-});
+  // -----------------------------
+  // LocalStorage Cost Codes (same as original)
+  // -----------------------------
+  const dateEl = document.getElementById("date");
+  const mode = document.getElementById("mode");
+  const dig = document.getElementById("dig");
+  const lay = document.getElementById("lay");
+  const back = document.getElementById("back");
+  const test = document.getElementById("test");
+  const digLabel = document.getElementById("digLabel");
 
-function render(list){
-  log.innerHTML="";
-  let td=0,tl=0,tb=0,tp=0;
-  list.forEach(e=>{
-    const total=e.dig+e.lay+e.back+e.test;
-    td+=e.dig; tl+=e.lay; tb+=e.back; tp+=total;
-    log.innerHTML+=`
-    <tr>
-      <td>${e.date}</td><td>${e.project}</td><td>${e.crew}</td><td>${e.cost}</td>
-      <td>${e.dig}</td><td>${e.lay}</td><td>${e.back}</td><td>${e.test}</td>
-      <td>${total}</td><td>${total}</td>
-      <td><button class="del" onclick="delRow('${e.id}')">X</button></td>
-    </tr>`;
-  });
-  kDig.textContent=td; kLay.textContent=tl; kBack.textContent=tb;
-  kPhys.textContent=tp; kWip.textContent=tp;
-  tTotal.textContent=tp;
-}
+  const project = document.getElementById("project");
+  const crew = document.getElementById("crew");
+  const cost = document.getElementById("cost");
 
-window.save=async()=>{
-  await addDoc(ref,{
-    date:date.value,
-    project:project.value,
-    crew:crew.value,
-    cost:cost.value,
-    dig:+dig.value||0,
-    lay:+lay.value||0,
-    back:+back.value||0,
-    test:+test.value||0
-  });
-};
+  const wDig = document.getElementById("wDig");
+  const wLay = document.getElementById("wLay");
+  const wBack = document.getElementById("wBack");
+  const wTest = document.getElementById("wTest");
 
-window.delRow=id=>deleteDoc(doc(db,"entries",id));
+  const manager = document.getElementById("manager");
+  const ccCode = document.getElementById("ccCode");
+  const ccDig = document.getElementById("ccDig");
+  const ccLay = document.getElementById("ccLay");
+  const ccBack = document.getElementById("ccBack");
+  const ccTest = document.getElementById("ccTest");
+  const ccProject = document.getElementById("ccProject");
 
-window.applyFilters=()=>{
-  let f=data.filter(e=>{
-    if(fProject.value && e.project!==fProject.value) return false;
-    if(fCrew.value && !e.crew?.toLowerCase().includes(fCrew.value.toLowerCase())) return false;
-    if(fStart.value && e.date<fStart.value) return false;
-    if(fEnd.value && e.date>fEnd.value) return false;
-    return true;
-  });
-  render(f);
-};
+  const filterProject = document.getElementById("filterProject");
+  const filterCrew = document.getElementById("filterCrew");
+  const filterStart = document.getElementById("filterStart");
+  const filterEnd = document.getElementById("filterEnd");
 
-window.toggleCostMgr=()=>costMgr.style.display=
-  costMgr.style.display==="block"?"none":"block";
+  const log = document.getElementById("log");
+  const fireStatus = document.getElementById("fireStatus");
 
-window.addCost=()=>{
-  if(newCost.value){
-    cost.innerHTML+=`<option>${newCost.value}</option>`;
-    newCost.value="";
+  const kDig = document.getElementById("kDig");
+  const kLay = document.getElementById("kLay");
+  const kBack = document.getElementById("kBack");
+  const kPhys = document.getElementById("kPhys");
+  const kWip = document.getElementById("kWip");
+  const tTotalLF = document.getElementById("tTotalLF");
+
+  dateEl.value = new Date().toISOString().split("T")[0];
+
+  let costCodes = JSON.parse(localStorage.getItem("ug_cost_codes") || '{"CIV-100":{"dig":42,"lay":25,"back":25,"test":8}}');
+  let projectDefaults = JSON.parse(localStorage.getItem("ug_project_defaults") || "{}");
+
+  function toggleMode(){
+    const weighted = mode.value === "weighted";
+    lay.disabled = weighted;
+    back.disabled = weighted;
+    digLabel.textContent = weighted ? "Dig LF (TOTAL)" : "Dig LF";
   }
-};
+  window.toggleMode = toggleMode;
 
-window.exportCSV=()=>alert("CSV export coming next");
+  function populateCostCodes(){
+    cost.innerHTML = "";
+    Object.keys(costCodes).forEach(c => cost.innerHTML += `<option>${c}</option>`);
+    applyCostCode();
+  }
+
+  function applyCostCode(){
+    const cfg = costCodes[cost.value];
+    if(!cfg) return;
+    wDig.value = cfg.dig;
+    wLay.value = cfg.lay;
+    wBack.value = cfg.back;
+    wTest.value = cfg.test || 0;
+  }
+  window.applyCostCode = applyCostCode;
+
+  function toggleManager(){
+    manager.style.display = manager.style.display === "none" ? "block" : "none";
+  }
+  window.toggleManager = toggleManager;
+
+  function saveCostCode(){
+    const c = ccCode.value.trim();
+    const d = +ccDig.value;
+    const l = +ccLay.value;
+    const b = +ccBack.value;
+    const t = +ccTest.value;
+
+    if(!c) return alert("Enter a Cost Code.");
+    if(d + l + b + t !== 100) return alert("Must total 100%");
+
+    costCodes[c] = { dig:d, lay:l, back:b, test:t };
+
+    if(ccProject.value){
+      projectDefaults[ccProject.value] = c;
+    }
+
+    localStorage.setItem("ug_cost_codes", JSON.stringify(costCodes));
+    localStorage.setItem("ug_project_defaults", JSON.stringify(projectDefaults));
+
+    populateCostCodes();
+    toggleManager();
+  }
+  window.saveCostCode = saveCostCode;
+
+  function deleteCostCode(){
+    const c = ccCode.value.trim();
+    if(!c) return alert("Enter the Cost Code to delete.");
+    if(!confirm("Delete cost code?")) return;
+
+    delete costCodes[c];
+    localStorage.setItem("ug_cost_codes", JSON.stringify(costCodes));
+    populateCostCodes();
+    toggleManager();
+  }
+  window.deleteCostCode = deleteCostCode;
+
+  function applyProjectDefault(){
+    if(projectDefaults[project.value]){
+      cost.value = projectDefaults[project.value];
+      applyCostCode();
+    }
+  }
+  window.applyProjectDefault = applyProjectDefault;
+
+  // -----------------------------
+  // Firestore live data
+  // -----------------------------
+  let allRows = [];
+  let filteredRows = [];
+
+  function populateProjectFilter(){
+    filterProject.innerHTML = `<option value="ALL">All Projects</option>`;
+    [...new Set(allRows.map(d => d.project).filter(Boolean))]
+      .forEach(p => filterProject.innerHTML += `<option>${p}</option>`);
+  }
+
+  function applyFilters(){
+    filteredRows = allRows.filter(d => {
+      if(filterProject.value !== "ALL" && d.project !== filterProject.value) return false;
+      if(filterCrew.value && !(d.crew || "").toLowerCase().includes(filterCrew.value.toLowerCase())) return false;
+      if(filterStart.value && d.date < filterStart.value) return false;
+      if(filterEnd.value && d.date > filterEnd.value) return false;
+      return true;
+    });
+    render();
+  }
+  window.applyFilters = applyFilters;
+
+  function render(){
+    log.innerHTML = "";
+    let td=0, tl=0, tb=0, tt=0, tp=0, tw=0;
+
+    filteredRows.forEach((e) => {
+      td += e.dig || 0;
+      tl += e.lay || 0;
+      tb += e.back || 0;
+      tt += e.test || 0;
+      tp += e.total || 0;
+      tw += e.wip || 0;
+
+      log.innerHTML += `<tr>
+        <td>${e.date || ""}</td>
+        <td>${e.project || ""}</td>
+        <td>${e.crew || ""}</td>
+        <td>${e.cost || ""}</td>
+        <td>${e.dig || 0}</td>
+        <td>${e.lay || 0}</td>
+        <td>${e.back || 0}</td>
+        <td>${e.test || 0}</td>
+        <td>${e.total || 0}</td>
+        <td>${Number(e.wip || 0).toFixed(2)}</td>
+        <td><button class="del" onclick="delRow('${e.id}')">X</button></td>
+      </tr>`;
+    });
+
+    kDig.textContent = td;
+    kLay.textContent = tl;
+    kBack.textContent = tb;
+    kPhys.textContent = tp;
+    kWip.textContent = tw.toFixed(2);
+    if(tTotalLF) tTotalLF.textContent = tp;
+  }
+
+  window.delRow = async (id) => {
+    if(!confirm("Delete entry?")) return;
+    await deleteDoc(doc(db, "entries", id));
+  };
+
+  window.save = async () => {
+    let d = +dig.value || 0;
+    let l = +lay.value || 0;
+    let b = +back.value || 0;
+    let t = +test.value || 0;
+    let wip = 0;
+
+    if(mode.value === "weighted"){
+      const cfg = costCodes[cost.value] || {dig:0,lay:0,back:0,test:0};
+      l = +(d * cfg.lay / 100).toFixed(2);
+      b = +(d * cfg.back / 100).toFixed(2);
+      t = +(d * (cfg.test || 0) / 100).toFixed(2);
+      lay.value = l;
+      back.value = b;
+      test.value = t;
+      wip = d + l + b + t;
+    } else {
+      wip = d*(+wDig.value/100) + l*(+wLay.value/100) + b*(+wBack.value/100) + t*(+wTest.value/100);
+    }
+
+    const total = d + l + b + t;
+
+    await addDoc(ref, {
+      date: dateEl.value,
+      project: project.value || "",
+      crew: crew.value || "",
+      cost: cost.value || "",
+      dig: d, lay: l, back: b, test: t,
+      total,
+      wip,
+      createdAt: Date.now()
+    });
+
+    dig.value = "";
+    lay.value = "";
+    back.value = "";
+    test.value = "";
+  };
+
+  function exportCSV(){
+    const today = new Date().toISOString().split("T")[0];
+    const proj = (project.value ? project.value.replace(/\s+/g,"_") : "ALL");
+
+    let csv = "Date,Project,Crew Lead,Cost,Dig,Lay,Backfill,Tested,TotalLF,Distributed_Progress_LF\n";
+    filteredRows.forEach(e => {
+      csv += `${e.date||""},${e.project||""},${e.crew||""},${e.cost||""},${e.dig||0},${e.lay||0},${e.back||0},${e.test||0},${e.total||0},${e.wip||0}\n`;
+    });
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv"}));
+    a.download = `Underground_Linear_FT_Progress_${proj}_${today}.csv`;
+    a.click();
+  }
+  window.exportCSV = exportCSV;
+
+  // -----------------------------
+  // Live listener
+  // -----------------------------
+  try{
+    const q = query(ref, orderBy("date","asc"));
+    onSnapshot(q, (snap) => {
+      allRows = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      populateProjectFilter();
+      applyFilters();
+      fireStatus.textContent = "Firestore: Connected (live)";
+    }, (err) => {
+      console.error(err);
+      fireStatus.textContent = "Firestore error (check rules / console)";
+    });
+  } catch(e){
+    console.error(e);
+    fireStatus.textContent = "Firestore error (check rules / console)";
+  }
+
+  // Init UI
+  populateCostCodes();
+  populateProjectFilter();
+  toggleMode();
+  mode.addEventListener("change", toggleMode);
 </script>
 
 </body>
