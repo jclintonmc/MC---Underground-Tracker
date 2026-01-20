@@ -65,22 +65,10 @@ th:first-child,td:first-child{text-align:left}
 </div>
 
 <div class="row" style="margin-top:14px">
-  <div class="col">
-    <label>Date</label>
-    <input type="date" id="date">
-  </div>
-  <div class="col">
-    <label>Project</label>
-    <input id="project">
-  </div>
-  <div class="col">
-    <label>Crew Lead</label>
-    <input id="crew">
-  </div>
-  <div class="col">
-    <label>Cost Code</label>
-    <input id="cost" value="CIV-100">
-  </div>
+  <div class="col"><label>Date</label><input type="date" id="date"></div>
+  <div class="col"><label>Project</label><input id="project"></div>
+  <div class="col"><label>Crew Lead</label><input id="crew"></div>
+  <div class="col"><label>Cost Code</label><input id="cost" value="CIV-100"></div>
 </div>
 
 <div class="row" style="margin-top:14px">
@@ -91,7 +79,7 @@ th:first-child,td:first-child{text-align:left}
 </div>
 
 <div class="row" style="margin-top:18px">
-  <button class="btn primary" id="saveBtn">Save Day</button>
+  <button class="btn primary" onclick="save()">Save Day</button>
 </div>
 
 <div class="kpis">
@@ -105,9 +93,9 @@ th:first-child,td:first-child{text-align:left}
 <table>
 <thead>
 <tr>
-  <th>Date</th><th>Project</th><th>Crew Lead</th><th>Cost</th>
-  <th>Dig</th><th>Lay</th><th>Backfill</th><th>Tested</th>
-  <th>Total</th><th>WIP</th><th>Del</th>
+<th>Date</th><th>Project</th><th>Crew</th><th>Cost</th>
+<th>Dig</th><th>Lay</th><th>Backfill</th><th>Tested</th>
+<th>Total</th><th>WIP</th><th>Del</th>
 </tr>
 </thead>
 <tbody id="log"></tbody>
@@ -115,75 +103,61 @@ th:first-child,td:first-child{text-align:left}
 
 </div>
 
-<!-- ================= FIREBASE REAL-TIME ================= -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  query,
-  orderBy
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+<!-- ================= FIREBASE CDN (GITHUB SAFE) ================= -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-const firebaseConfig = {
+<script>
+firebase.initializeApp({
   apiKey: "AIzaSyChNb8zTdAPahDCgTah1W0CRpMS7S9wpI8",
   authDomain: "mc-underground-tracker.firebaseapp.com",
-  projectId: "mc-underground-tracker",
-  storageBucket: "mc-underground-tracker.firebasestorage.app",
-  messagingSenderId: "214694975194",
-  appId: "1:214694975194:web:de814a7e23074faa37b7e3"
-};
+  projectId: "mc-underground-tracker"
+});
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const ref = collection(db,"entries");
+const db = firebase.firestore();
+const ref = db.collection("entries");
 
 date.value = new Date().toISOString().split("T")[0];
 
-let rows = [];
-
-onSnapshot(query(ref, orderBy("date","asc")), snap => {
-  rows = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-  render();
-});
-
-function render(){
-  log.innerHTML="";
+ref.orderBy("date").onSnapshot(snapshot => {
+  log.innerHTML = "";
   let td=0,tl=0,tb=0,tp=0,tw=0;
-  rows.forEach(r=>{
-    td+=r.dig; tl+=r.lay; tb+=r.back; tp+=r.total; tw+=r.wip;
-    log.innerHTML+=`
+
+  snapshot.forEach(doc => {
+    const e = doc.data();
+    td+=e.dig; tl+=e.lay; tb+=e.back; tp+=e.total; tw+=e.wip;
+    log.innerHTML += `
       <tr>
-        <td>${r.date}</td><td>${r.project}</td><td>${r.crew}</td><td>${r.cost}</td>
-        <td>${r.dig}</td><td>${r.lay}</td><td>${r.back}</td><td>${r.test}</td>
-        <td>${r.total}</td><td>${r.wip.toFixed(2)}</td>
-        <td><button class="del" onclick="delRow('${r.id}')">X</button></td>
+        <td>${e.date}</td><td>${e.project}</td><td>${e.crew}</td><td>${e.cost}</td>
+        <td>${e.dig}</td><td>${e.lay}</td><td>${e.back}</td><td>${e.test}</td>
+        <td>${e.total}</td><td>${e.wip.toFixed(2)}</td>
+        <td><button class="del" onclick="delRow('${doc.id}')">X</button></td>
       </tr>`;
   });
-  kDig.textContent=td; kLay.textContent=tl; kBack.textContent=tb;
-  kPhys.textContent=tp; kWip.textContent=tw.toFixed(2);
-}
 
-window.delRow = async id => {
-  if(confirm("Delete entry?")) await deleteDoc(doc(db,"entries",id));
-};
+  kDig.textContent=td;
+  kLay.textContent=tl;
+  kBack.textContent=tb;
+  kPhys.textContent=tp;
+  kWip.textContent=tw.toFixed(2);
+});
 
-document.getElementById("saveBtn").onclick = async ()=>{
+function save(){
   const d=+dig.value||0,l=+lay.value||0,b=+back.value||0,t=+test.value||0;
   const total=d+l+b+t;
-  const wip=total;
-  await addDoc(ref,{
+  ref.add({
     date:date.value,
     project:project.value,
     crew:crew.value,
     cost:cost.value,
-    dig:d,lay:l,back:b,test:t,total,wip
+    dig:d,lay:l,back:b,test:t,
+    total,wip:total
   });
-};
+}
+
+function delRow(id){
+  if(confirm("Delete entry?")) ref.doc(id).delete();
+}
 </script>
 
 </body>
