@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
 <title>Underground Linear FT Tracker</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
 :root{
@@ -20,13 +20,7 @@ h1{margin:0;font-size:28px}
 label{font-size:12px;color:var(--muted)}
 input,select{width:100%;padding:11px;border-radius:12px;border:1px solid var(--border);background:#020617;color:var(--text)}
 .datewrap{display:flex;gap:8px;align-items:center}
-.cal{
-  width:44px;height:44px;border-radius:12px;
-  border:1px solid var(--border);
-  background:#1f2937;
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;font-size:18px;
-}
+.cal{width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:#1f2937;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .btn{padding:11px 20px;border-radius:14px;border:none;cursor:pointer}
 .primary{background:var(--primary);color:white}
 .success{background:var(--success);color:white}
@@ -43,503 +37,153 @@ th:first-child,td:first-child{text-align:left}
 .mode-box{background:#020617;border:1px solid var(--border);border-radius:14px;padding:12px}
 .mode-box .weights{display:flex;gap:8px;margin-top:8px}
 .cost-manager{margin-top:14px;padding:16px;border-radius:14px;background:#020617;border:1px solid #1f2937}
-
-/* small status line */
-.statusline{
-  margin-top:10px;
-  font-size:12px;
-  color:#94a3b8;
-  display:flex;
-  gap:12px;
-  align-items:center;
-}
-.dot{
-  width:8px;height:8px;border-radius:99px;background:#64748b;display:inline-block;
-}
-.dot.live{background:#22c55e;}
-.dot.err{background:#ef4444;}
 </style>
 </head>
 
 <body>
 <div class="card">
 
-  <!-- =========================================================
-       HEADER + ENTRY MODE BOX  (DO NOT BREAK DIVS)
-  ========================================================== -->
-  <div class="row" style="align-items:flex-start">
-    <div style="flex:1">
-      <h1>Underground Linear FT Tracker</h1>
-      <div class="subtitle">Production + Activity-Distributed Progress Tracking</div>
-    </div>
-
-    <div class="mode-box" style="min-width:320px">
-      <label>Entry Mode</label>
-      <select id="mode" onchange="toggleMode()">
-        <option value="manual">Manual Input</option>
-        <option value="weighted">Weighted Split</option>
-      </select>
-      <div class="weights">
-        <input id="wTest" readonly>
-        <input id="wDig" readonly>
-        <input id="wLay" readonly>
-        <input id="wBack" readonly>
-      </div>
-      <div style="font-size:11px;color:#94a3b8;margin-top:4px">Dig / Lay / Backfill %</div>
-    </div>
+<div class="row" style="align-items:flex-start">
+  <div style="flex:1">
+    <h1>Underground Linear FT Tracker</h1>
+    <div class="subtitle">Production + Activity-Distributed Progress Tracking</div>
   </div>
 
-  <div class="statusline">
-    <span class="dot" id="syncDot"></span>
-    <span id="syncText">Initializing…</span>
+  <div class="mode-box" style="min-width:320px">
+    <label>Entry Mode</label>
+    <select id="mode">
+      <option value="manual">Manual Input</option>
+    </select>
+    <div class="weights">
+      <input readonly value="8">
+      <input readonly value="42">
+      <input readonly value="25">
+      <input readonly value="25">
+    </div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:4px">Dig / Lay / Backfill %</div>
   </div>
+</div>
 
-  <!-- =========================================================
-       TOP INPUT ROW  (DATE / PROJECT / CREW / COST + GEAR)
-  ========================================================== -->
-  <div class="row" style="margin-top:14px">
-    <div class="col">
-      <label>Date</label>
-      <div class="datewrap">
-        <input type="date" id="date">
-        <div class="cal" onclick="date.showPicker()">📅</div>
-      </div>
-    </div>
-
-    <div class="col">
-      <label>Project</label>
-      <input id="project" onchange="applyProjectDefault()">
-    </div>
-
-    <div class="col">
-      <label>Crew Lead</label>
-      <input id="crew">
-    </div>
-
-    <div class="col">
-      <label>Cost Code</label>
-      <div style="display:flex;gap:8px">
-        <select id="cost" onchange="applyCostCode()"></select>
-        <button class="btn gray" onclick="toggleManager()" type="button">⚙</button>
-      </div>
+<div class="row" style="margin-top:14px">
+  <div class="col">
+    <label>Date</label>
+    <div class="datewrap">
+      <input type="date" id="date">
+      <div class="cal" onclick="date.showPicker()">📅</div>
     </div>
   </div>
+  <div class="col"><label>Project</label><input id="project"></div>
+  <div class="col"><label>Crew Lead</label><input id="crew"></div>
+  <div class="col"><label>Cost Code</label><input id="cost" value="CIV-100"></div>
+</div>
 
-  <!-- =========================================================
-       COST CODE MANAGER PANEL  (GEAR PANEL)
-  ========================================================== -->
-  <div id="manager" class="cost-manager" style="display:none">
-    <div class="row">
-      <div class="col"><label>Cost Code</label><input id="ccCode"></div>
-      <div class="col"><label>Dig %</label><input id="ccDig" type="number"></div>
-      <div class="col"><label>Lay %</label><input id="ccLay" type="number"></div>
-      <div class="col"><label>Backfill %</label><input id="ccBack" type="number"></div>
-      <div class="col"><label>Tested %</label><input id="ccTest" type="number"></div>
-      <div class="col"><label>Default Project</label><input id="ccProject"></div>
-    </div>
-    <div class="row" style="margin-top:10px">
-      <button class="btn primary" onclick="saveCostCode()" type="button">Save / Update</button>
-      <button class="btn danger" onclick="deleteCostCode()" type="button">Delete</button>
-    </div>
-  </div>
+<div class="row" style="margin-top:14px">
+  <div class="col"><label>Dig LF</label><input type="number" id="dig"></div>
+  <div class="col"><label>Lay LF</label><input type="number" id="lay"></div>
+  <div class="col"><label>Backfill LF</label><input type="number" id="back"></div>
+  <div class="col"><label>Tested LF</label><input type="number" id="test"></div>
+</div>
 
-  <!-- =========================================================
-       LF INPUT ROW
-  ========================================================== -->
-  <div class="row" style="margin-top:14px">
-    <div class="col"><label id="digLabel">Dig LF</label><input type="number" id="dig"></div>
-    <div class="col"><label>Lay LF</label><input type="number" id="lay"></div>
-    <div class="col"><label>Backfill LF</label><input type="number" id="back"></div>
-    <div class="col"><label>Tested LF</label><input type="number" id="test"></div>
-  </div>
+<div class="row" style="margin-top:18px">
+  <button class="btn primary" onclick="save()">Save Day</button>
+</div>
 
-  <!-- =========================================================
-       SAVE/EXPORT ROW  (CRITICAL: THIS ROW MUST CLOSE)
-  ========================================================== -->
-  <div class="row" style="margin-top:18px">
-    <button class="btn primary" onclick="save()" type="button">Save Day</button>
-    <button class="btn success" onclick="exportCSV()" type="button">Export Filtered</button>
-  </div>
+<div class="kpis">
+  <div class="kpi"><span>Total Dig</span><strong id="kDig">0</strong></div>
+  <div class="kpi"><span>Total Lay</span><strong id="kLay">0</strong></div>
+  <div class="kpi"><span>Total Backfill</span><strong id="kBack">0</strong></div>
+  <div class="kpi"><span>Total Physical LF</span><strong id="kPhys">0</strong></div>
+  <div class="kpi"><span>Total Progress LF</span><strong id="kWip">0</strong></div>
+</div>
 
-  <!-- =========================================================
-       FILTER BAR (MUST BE ITS OWN ROW)
-  ========================================================== -->
-  <div class="row" style="margin-top:22px">
-    <div class="col">
-      <label>Filter Project</label>
-      <select id="filterProject"></select>
-    </div>
-
-    <div class="col">
-      <label>Filter Crew Lead</label>
-      <input id="filterCrew" placeholder="Crew Lead Name">
-    </div>
-
-    <div class="col">
-      <label>Start Date</label>
-      <div class="datewrap">
-        <input type="date" id="filterStart">
-        <div class="cal" onclick="filterStart.showPicker()">📅</div>
-      </div>
-    </div>
-
-    <div class="col">
-      <label>End Date</label>
-      <div class="datewrap">
-        <input type="date" id="filterEnd">
-        <div class="cal" onclick="filterEnd.showPicker()">📅</div>
-      </div>
-    </div>
-
-    <div class="col" style="max-width:160px">
-      <button class="btn gray" style="margin-top:22px" onclick="applyFilters()" type="button">Apply Filter</button>
-    </div>
-  </div>
-
-  <!-- =========================================================
-       KPIs
-  ========================================================== -->
-  <div class="kpis">
-    <div class="kpi"><span>Total Dig</span><strong id="kDig">0</strong></div>
-    <div class="kpi"><span>Total Lay</span><strong id="kLay">0</strong></div>
-    <div class="kpi"><span>Total Backfill</span><strong id="kBack">0</strong></div>
-    <div class="kpi"><span>Total Physical LF</span><strong id="kPhys">0</strong></div>
-    <div class="kpi"><span>Total Progress LF</span><strong id="kWip">0</strong></div>
-  </div>
-
-  <!-- =========================================================
-       TABLE + FOOTER TOTAL
-  ========================================================== -->
-  <table>
-    <thead>
-      <tr>
-        <th>Date</th><th>Project</th><th>Crew Lead</th><th>Cost</th>
-        <th>Dig</th><th>Lay</th><th>Backfill</th><th>Tested</th>
-        <th>Total LF</th><th>WIP</th><th>Delete</th>
-      </tr>
-    </thead>
-    <tbody id="log"></tbody>
-    <tfoot>
-      <tr>
-        <td colspan="7" style="text-align:right;font-weight:600">TOTAL LINEAR FT</td>
-        <td id="tTotalLF" style="font-weight:700">0</td>
-        <td></td>
-        <td></td>
-      </tr>
-    </tfoot>
-  </table>
+<table>
+<thead>
+<tr>
+  <th>Date</th><th>Project</th><th>Crew</th><th>Cost</th>
+  <th>Dig</th><th>Lay</th><th>Back</th><th>Test</th>
+  <th>Total</th><th>WIP</th><th>Del</th>
+</tr>
+</thead>
+<tbody id="log"></tbody>
+</table>
 
 </div>
 
-<!-- =========================================================
-     APP LOGIC (UI + COST CODES + FILTERS)
-========================================================== -->
-<script>
-  // Default date
-  date.value = new Date().toISOString().split('T')[0];
-
-  // Local cost-code configs (kept local so UI behaves same)
-  let costCodes = JSON.parse(localStorage.getItem('ug_cost_codes') || '{"CIV-100":{"dig":42,"lay":25,"back":25,"test":8}}');
-  let projectDefaults = JSON.parse(localStorage.getItem('ug_project_defaults') || '{}');
-
-  // Firestore-backed entries
-  let data = [];         // all entries from Firestore (each has id)
-  let filteredData = []; // after filters
-
-  function toggleMode(){
-    const weighted = mode.value === 'weighted';
-    lay.disabled = weighted;
-    back.disabled = weighted;
-    digLabel.textContent = weighted ? 'Dig LF (TOTAL)' : 'Dig LF';
-  }
-
-  function populateCostCodes(){
-    cost.innerHTML = '';
-    Object.keys(costCodes).forEach(c => cost.innerHTML += `<option>${c}</option>`);
-    applyCostCode();
-  }
-
-  function applyCostCode(){
-    const cfg = costCodes[cost.value];
-    if(!cfg) return;
-    wDig.value = cfg.dig;
-    wLay.value = cfg.lay;
-    wBack.value = cfg.back;
-    wTest.value = cfg.test || 0;
-  }
-
-  function toggleManager(){
-    manager.style.display = manager.style.display === 'none' ? 'block' : 'none';
-  }
-
-  function saveCostCode(){
-    const c = ccCode.value.trim();
-    const d = +ccDig.value, l = +ccLay.value, b = +ccBack.value, t = +ccTest.value;
-
-    if(!c) return alert("Enter a cost code");
-    if(d + l + b + t !== 100) return alert("Must total 100%");
-
-    costCodes[c] = { dig:d, lay:l, back:b, test:t };
-
-    if(ccProject.value) projectDefaults[ccProject.value] = c;
-
-    localStorage.setItem('ug_cost_codes', JSON.stringify(costCodes));
-    localStorage.setItem('ug_project_defaults', JSON.stringify(projectDefaults));
-
-    populateCostCodes();
-    toggleManager();
-  }
-
-  function deleteCostCode(){
-    const c = ccCode.value.trim();
-    if(!c) return alert("Enter cost code to delete");
-    if(!confirm('Delete cost code?')) return;
-    delete costCodes[c];
-    localStorage.setItem('ug_cost_codes', JSON.stringify(costCodes));
-    populateCostCodes();
-    toggleManager();
-  }
-
-  function applyProjectDefault(){
-    if(projectDefaults[project.value]){
-      cost.value = projectDefaults[project.value];
-      applyCostCode();
-    }
-  }
-
-  function populateProjectFilter(){
-    filterProject.innerHTML = '<option value="ALL">All Projects</option>';
-    [...new Set(data.map(d => d.project).filter(Boolean))]
-      .forEach(p => filterProject.innerHTML += `<option>${p}</option>`);
-  }
-
-  function applyFilters(){
-    filteredData = data.filter(d => {
-      if(filterProject.value !== 'ALL' && d.project !== filterProject.value) return false;
-      if(filterCrew.value && !(d.crew || '').toLowerCase().includes(filterCrew.value.toLowerCase())) return false;
-      if(filterStart.value && d.date < filterStart.value) return false;
-      if(filterEnd.value && d.date > filterEnd.value) return false;
-      return true;
-    });
-    render();
-  }
-
-  function render(){
-    log.innerHTML = '';
-    let td=0, tl=0, tb=0, tt=0, tp=0, tw=0;
-
-    filteredData.forEach(e => {
-      td += e.dig || 0;
-      tl += e.lay || 0;
-      tb += e.back || 0;
-      tt += e.test || 0;
-      tp += e.total || 0;
-      tw += e.wip || 0;
-
-      log.innerHTML += `<tr>
-        <td>${e.date || ''}</td>
-        <td>${e.project || ''}</td>
-        <td>${e.crew || ''}</td>
-        <td>${e.cost || ''}</td>
-        <td>${e.dig || 0}</td>
-        <td>${e.lay || 0}</td>
-        <td>${e.back || 0}</td>
-        <td>${e.test || 0}</td>
-        <td>${e.total || 0}</td>
-        <td>${(e.wip || 0).toFixed(2)}</td>
-        <td><button class="del" onclick="delById('${e.id}')">X</button></td>
-      </tr>`;
-    });
-
-    kDig.textContent = td;
-    kLay.textContent = tl;
-    kBack.textContent = tb;
-    kPhys.textContent = tp;
-    kWip.textContent = tw.toFixed(2);
-    tTotalLF.textContent = tp;
-  }
-
-  function exportCSV(){
-    const today = new Date().toISOString().split('T')[0];
-    const proj = (filterProject.value && filterProject.value !== 'ALL')
-      ? filterProject.value.replace(/\s+/g,'_')
-      : 'ALL';
-
-    let csv = 'Date,Project,Crew Lead,Cost,Dig,Lay,Backfill,Tested,TotalLF,Distributed_Progress_LF\n';
-    filteredData.forEach(e => {
-      csv += `${e.date},${e.project},${e.crew||''},${e.cost},${e.dig||0},${e.lay||0},${e.back||0},${e.test||0},${e.total||0},${e.wip||0}\n`;
-    });
-
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
-    a.download = `Underground_Linear_FT_Progress_${proj}_${today}.csv`;
-    a.click();
-  }
-
-  // expose export for button
-  window.exportCSV = exportCSV;
-
-  // Init UI pieces that are NOT Firestore-dependent
-  populateCostCodes();
-  toggleMode();
-
-  // Bind filter live typing (optional: still requires applyFilters button, but these help prevent “looks stuck”)
-  filterCrew.addEventListener('input', () => applyFilters());
-  filterProject.addEventListener('change', () => applyFilters());
-  filterStart.addEventListener('change', () => applyFilters());
-  filterEnd.addEventListener('change', () => applyFilters());
-</script>
-
-<!-- =========================================================
-     FIRESTORE REAL-TIME SYNC (NO REFRESH NEEDED)
-========================================================== -->
+<!-- 🔥 FIRESTORE REAL-TIME (SAFE VERSION) -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import {
-    getFirestore,
-    collection,
-    addDoc,
-    deleteDoc,
-    doc,
-    query,
-    orderBy,
-    onSnapshot,
-    serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  deleteDoc,
+  doc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyChNb8zTdAPahDCgTah1W0CRpMS7S9wpI8",
-    authDomain: "mc-underground-tracker.firebaseapp.com",
-    projectId: "mc-underground-tracker",
-    storageBucket: "mc-underground-tracker.firebasestorage.app",
-    messagingSenderId: "214694975194",
-    appId: "1:214694975194:web:de814a7e23074faa37b7e3"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyChNb8zTdAPahDCgTah1W0CRpMS7S9wpI8",
+  authDomain: "mc-underground-tracker.firebaseapp.com",
+  projectId: "mc-underground-tracker",
+  storageBucket: "mc-underground-tracker.firebasestorage.app",
+  messagingSenderId: "214694975194",
+  appId: "1:214694975194:web:de814a7e23074faa37b7e3"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const ref = collection(db,"entries");
 
-  // Collection name (keep stable!)
-  const entriesRef = collection(db, "entries");
+date.value = new Date().toISOString().split("T")[0];
 
-  const syncDot = document.getElementById("syncDot");
-  const syncText = document.getElementById("syncText");
+let data = [];
 
-  function setStatus(state, msg){
-    syncDot.classList.remove("live","err");
-    if(state === "live") syncDot.classList.add("live");
-    if(state === "err") syncDot.classList.add("err");
-    syncText.textContent = msg;
-  }
+const q = query(ref, orderBy("createdAt","asc"));
 
-  // Real-time listener
-  try{
-    setStatus("", "Connecting to Firestore…");
+onSnapshot(q, snap=>{
+  data = snap.docs.map(d=>({id:d.id,...d.data()}));
+  render();
+}, err=>{
+  console.error("Firestore error:", err);
+});
 
-    // Stable ordering: by date, then createdAt
-    const q = query(entriesRef, orderBy("date","asc"), orderBy("createdAt","asc"));
+window.save = async ()=>{
+  const d=+dig.value||0,l=+lay.value||0,b=+back.value||0,t=+test.value||0;
+  await addDoc(ref,{
+    createdAt: serverTimestamp(),
+    date: date.value,
+    project: project.value,
+    crew: crew.value,
+    cost: cost.value,
+    dig:d,lay:l,back:b,test:t,
+    total:d+l+b+t,
+    wip:d+l+b+t
+  });
+};
 
-    onSnapshot(q, (snap) => {
-      // IMPORTANT: update the global `data` array used by UI script
-      window.data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+window.delRow = async id=>{
+  if(confirm("Delete entry?")) await deleteDoc(doc(db,"entries",id));
+};
 
-      // pull into local scope too (used by UI functions)
-      // (UI code expects `data` and `populateProjectFilter/applyFilters` in global scope)
-      // so we mirror:
-      data = window.data;
-
-      populateProjectFilter();
-      applyFilters();
-
-      setStatus("live", `Live sync OK • ${snap.size} row(s)`);
-    }, (err) => {
-      console.error("Firestore onSnapshot error:", err);
-      setStatus("err", "Firestore error (check rules / console)");
-    });
-
-  } catch(e){
-    console.error("Firestore init error:", e);
-    setStatus("err", "Firestore init failed (check config / console)");
-  }
-
-  // DELETE (called from UI)
-  window.delById = async function(id){
-    if(!confirm("Delete entry?")) return;
-    try{
-      await deleteDoc(doc(db, "entries", id));
-      // no manual refresh needed; onSnapshot updates automatically
-    } catch(e){
-      console.error("Delete failed:", e);
-      alert("Delete failed. Check Firestore rules.");
-    }
-  };
-
-  // SAVE (called from UI)
-  window.save = async function(){
-    try{
-      // Pull values from UI
-      let d = +document.getElementById("dig").value || 0;
-      let l = +document.getElementById("lay").value || 0;
-      let b = +document.getElementById("back").value || 0;
-      let t = +document.getElementById("test").value || 0;
-
-      const modeEl = document.getElementById("mode");
-      const costEl = document.getElementById("cost");
-
-      // cost-code weights (from UI inputs)
-      const wDig = +document.getElementById("wDig").value || 0;
-      const wLay = +document.getElementById("wLay").value || 0;
-      const wBack = +document.getElementById("wBack").value || 0;
-      const wTest = +document.getElementById("wTest").value || 0;
-
-      let wip = 0;
-
-      // Weighted mode matches your original behavior:
-      // Dig is total; Lay/Back/Test auto-calculated from % and dig
-      if(modeEl.value === "weighted"){
-        const cfg = (JSON.parse(localStorage.getItem('ug_cost_codes') || '{}')[costEl.value]) || null;
-        const layPct = cfg ? (cfg.lay||0) : wLay;
-        const backPct = cfg ? (cfg.back||0) : wBack;
-        const testPct = cfg ? (cfg.test||0) : wTest;
-
-        l = +(d * layPct / 100).toFixed(2);
-        b = +(d * backPct / 100).toFixed(2);
-        t = +(d * testPct / 100).toFixed(2);
-
-        document.getElementById("lay").value = l;
-        document.getElementById("back").value = b;
-        document.getElementById("test").value = t;
-
-        // original weighted: WIP equals sum (d+l+b+t)
-        wip = d + l + b + t;
-      } else {
-        // manual mode uses weighted progress formula
-        wip = d*(wDig/100) + l*(wLay/100) + b*(wBack/100) + t*(wTest/100);
-      }
-
-      const total = d + l + b + t;
-
-      await addDoc(entriesRef, {
-        date: document.getElementById("date").value,
-        project: document.getElementById("project").value,
-        crew: document.getElementById("crew").value || "",
-        cost: costEl.value,
-        dig: d,
-        lay: l,
-        back: b,
-        test: t,
-        total,
-        wip,
-        createdAt: serverTimestamp()
-      });
-
-      // no refresh needed; onSnapshot updates automatically
-    } catch(e){
-      console.error("Save failed:", e);
-      alert("Save failed. Check Firestore rules / console.");
-    }
-  };
-
+function render(){
+  log.innerHTML="";
+  let td=0,tl=0,tb=0,tp=0,tw=0;
+  data.forEach(e=>{
+    td+=e.dig; tl+=e.lay; tb+=e.back; tp+=e.total; tw+=e.wip;
+    log.innerHTML+=`
+    <tr>
+      <td>${e.date}</td><td>${e.project}</td><td>${e.crew}</td><td>${e.cost}</td>
+      <td>${e.dig}</td><td>${e.lay}</td><td>${e.back}</td><td>${e.test}</td>
+      <td>${e.total}</td><td>${e.wip.toFixed(2)}</td>
+      <td><button class="del" onclick="delRow('${e.id}')">X</button></td>
+    </tr>`;
+  });
+  kDig.textContent=td; kLay.textContent=tl; kBack.textContent=tb;
+  kPhys.textContent=tp; kWip.textContent=tw.toFixed(2);
+}
 </script>
 
 </body>
