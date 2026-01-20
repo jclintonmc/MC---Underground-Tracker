@@ -34,12 +34,15 @@ th:first-child,td:first-child{text-align:left}
 .del{background:#7f1d1d;color:white;border:none;border-radius:10px;padding:6px 10px;cursor:pointer}
 .mode-box{background:#020617;border:1px solid var(--border);border-radius:14px;padding:12px}
 .mode-box .weights{display:flex;gap:8px;margin-top:8px}
+.icon-btn{width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:#1f2937;color:white;cursor:pointer}
+.cost-manager{display:none;margin-top:14px;padding:16px;border-radius:14px;background:#020617;border:1px solid #1f2937}
 </style>
 </head>
 
 <body>
 <div class="card">
 
+<!-- HEADER -->
 <div class="row">
   <div style="flex:1">
     <h1>Underground Linear FT Tracker</h1>
@@ -62,13 +65,30 @@ th:first-child,td:first-child{text-align:left}
   </div>
 </div>
 
+<!-- ENTRY -->
 <div class="row" style="margin-top:14px">
   <div class="col"><label>Date</label><input type="date" id="date"></div>
   <div class="col"><label>Project</label><input id="project"></div>
   <div class="col"><label>Crew Lead</label><input id="crew"></div>
-  <div class="col"><label>Cost Code</label><input id="cost" value="CIV-100"></div>
+  <div class="col">
+    <label>Cost Code</label>
+    <div style="display:flex;gap:8px">
+      <select id="cost"></select>
+      <button class="icon-btn" onclick="toggleCostMgr()">⚙️</button>
+    </div>
+  </div>
 </div>
 
+<!-- COST MANAGER -->
+<div class="cost-manager" id="costMgr">
+  <label>Add Cost Code</label>
+  <div class="row">
+    <input id="newCost" placeholder="CIV-200">
+    <button class="btn gray" onclick="addCost()">Add</button>
+  </div>
+</div>
+
+<!-- LF INPUT -->
 <div class="row" style="margin-top:14px">
   <div class="col"><label>Dig LF</label><input type="number" id="dig"></div>
   <div class="col"><label>Lay LF</label><input type="number" id="lay"></div>
@@ -76,11 +96,13 @@ th:first-child,td:first-child{text-align:left}
   <div class="col"><label>Tested LF</label><input type="number" id="test"></div>
 </div>
 
+<!-- ACTIONS -->
 <div class="row" style="margin-top:18px">
   <button class="btn primary" onclick="save()">Save Day</button>
   <button class="btn success" onclick="exportCSV()">Export Filtered</button>
 </div>
 
+<!-- FILTERS -->
 <div class="row" style="margin-top:18px">
   <div class="col"><label>Filter Project</label><input id="fProject"></div>
   <div class="col"><label>Filter Crew Lead</label><input id="fCrew"></div>
@@ -89,6 +111,7 @@ th:first-child,td:first-child{text-align:left}
   <button class="btn gray" onclick="applyFilter()">Apply Filter</button>
 </div>
 
+<!-- KPIs -->
 <div class="kpis">
   <div class="kpi"><span>Total Dig</span><strong id="kDig">0</strong></div>
   <div class="kpi"><span>Total Lay</span><strong id="kLay">0</strong></div>
@@ -97,12 +120,13 @@ th:first-child,td:first-child{text-align:left}
   <div class="kpi"><span>Total Progress LF</span><strong id="kWip">0</strong></div>
 </div>
 
+<!-- TABLE -->
 <table>
 <thead>
 <tr>
-  <th>Date</th><th>Project</th><th>Crew</th><th>Cost</th>
-  <th>Dig</th><th>Lay</th><th>Back</th><th>Test</th>
-  <th>Total</th><th>WIP</th><th>Del</th>
+  <th>Date</th><th>Project</th><th>Crew Lead</th><th>Cost</th>
+  <th>Dig</th><th>Lay</th><th>Backfill</th><th>Tested</th>
+  <th>Total LF</th><th>WIP</th><th>Delete</th>
 </tr>
 </thead>
 <tbody id="log"></tbody>
@@ -110,71 +134,71 @@ th:first-child,td:first-child{text-align:left}
 
 </div>
 
+<!-- FIRESTORE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, serverTimestamp } 
 from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const firebaseConfig = {
+const app = initializeApp({
   apiKey: "AIzaSyChNb8zTdAPahDCgTah1W0CRpMS7S9wpI8",
   authDomain: "mc-underground-tracker.firebaseapp.com",
   projectId: "mc-underground-tracker"
-};
-
-const app = initializeApp(firebaseConfig);
+});
 const db = getFirestore(app);
 const ref = collection(db,"entries");
 
-let rows=[];
+let data=[];
+let costs=["CIV-100"];
 
 date.value=new Date().toISOString().split("T")[0];
 
-onSnapshot(ref,snap=>{
-  rows=snap.docs.map(d=>({id:d.id,...d.data()}));
+onSnapshot(ref,s=>{
+  data=s.docs.map(d=>({id:d.id,...d.data()}));
   render();
 });
 
 function render(){
   log.innerHTML="";
   let td=0,tl=0,tb=0,tp=0;
-  rows.forEach(r=>{
-    td+=r.dig; tl+=r.lay; tb+=r.back; tp+=r.total;
+  data.forEach(e=>{
+    td+=e.dig; tl+=e.lay; tb+=e.back; tp+=e.total;
     log.innerHTML+=`
     <tr>
-      <td>${r.date}</td><td>${r.project}</td><td>${r.crew}</td><td>${r.cost}</td>
-      <td>${r.dig}</td><td>${r.lay}</td><td>${r.back}</td><td>${r.test}</td>
-      <td>${r.total}</td><td>${r.total}</td>
-      <td><button class="del" onclick="del('${r.id}')">X</button></td>
+      <td>${e.date}</td><td>${e.project}</td><td>${e.crew}</td><td>${e.cost}</td>
+      <td>${e.dig}</td><td>${e.lay}</td><td>${e.back}</td><td>${e.test}</td>
+      <td>${e.total}</td><td>${e.total}</td>
+      <td><button class="del" onclick="del('${e.id}')">X</button></td>
     </tr>`;
   });
-  kDig.textContent=td;
-  kLay.textContent=tl;
-  kBack.textContent=tb;
-  kPhys.textContent=tp;
-  kWip.textContent=tp;
+  kDig.textContent=td; kLay.textContent=tl; kBack.textContent=tb;
+  kPhys.textContent=tp; kWip.textContent=tp;
 }
 
 window.save=async()=>{
-  try{
-    const d=+dig.value||0,l=+lay.value||0,b=+back.value||0,t=+test.value||0;
-    await addDoc(ref,{
-      createdAt:serverTimestamp(),
-      date:date.value,project:project.value,crew:crew.value,cost:cost.value,
-      dig:d,lay:l,back:b,test:t,total:d+l+b+t
-    });
-  }catch(e){
-    alert("Firestore error — check rules");
-    console.error(e);
-  }
+  await addDoc(ref,{
+    createdAt:serverTimestamp(),
+    date:date.value,project:project.value,crew:crew.value,cost:cost.value,
+    dig:+dig.value||0,lay:+lay.value||0,back:+back.value||0,test:+test.value||0,
+    total:(+dig.value||0)+(+lay.value||0)+(+back.value||0)+(+test.value||0)
+  });
 };
 
-window.del=async id=>{
-  if(confirm("Delete entry?")) await deleteDoc(doc(db,"entries",id));
-};
-
+window.del=id=>deleteDoc(doc(db,"entries",id));
 window.applyFilter=()=>render();
-window.exportCSV=()=>alert("Export coming next");
+window.exportCSV=()=>alert("CSV export next step");
 
+window.toggleCostMgr=()=>costMgr.style.display=
+  costMgr.style.display==="block"?"none":"block";
+
+window.addCost=()=>{
+  if(newCost.value){costs.push(newCost.value);renderCosts();newCost.value="";}
+};
+
+function renderCosts(){
+  cost.innerHTML=costs.map(c=>`<option>${c}</option>`).join("");
+}
+renderCosts();
 </script>
 </body>
 </html>
