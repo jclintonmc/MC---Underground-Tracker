@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-/* --- STYLES UNCHANGED --- */
 :root{
   --bg:#0f172a; --card:#111827; --text:#e5e7eb; --muted:#9ca3af;
   --border:#374151; --primary:#2563eb; --success:#16a34a;
@@ -21,7 +20,7 @@ h1{margin:0;font-size:28px}
 label{font-size:12px;color:var(--muted)}
 input,select{width:100%;padding:11px;border-radius:12px;border:1px solid var(--border);background:#020617;color:var(--text)}
 .datewrap{display:flex;gap:8px;align-items:center}
-.cal{width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:#1f2937;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px}
+.cal{width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:#1f2937;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .btn{padding:11px 20px;border-radius:14px;border:none;cursor:pointer}
 .primary{background:var(--primary);color:white}
 .success{background:var(--success);color:white}
@@ -35,29 +34,39 @@ table{width:100%;border-collapse:collapse;margin-top:26px}
 th,td{border-bottom:1px solid var(--border);padding:10px;text-align:right}
 th:first-child,td:first-child{text-align:left}
 .del{background:#7f1d1d;color:white;border:none;border-radius:10px;padding:6px 10px;cursor:pointer}
+.mode-box{background:#020617;border:1px solid var(--border);border-radius:14px;padding:12px}
+.mode-box .weights{display:flex;gap:8px;margin-top:8px}
 </style>
 </head>
 
 <body>
 <div class="card">
+
 <h1>Underground Linear FT Tracker</h1>
+<div class="subtitle">Production + Activity-Distributed Progress Tracking</div>
 
 <table>
 <thead>
 <tr>
-<th>Date</th><th>Project</th><th>Crew</th><th>Cost</th>
-<th>Dig</th><th>Lay</th><th>Back</th><th>Test</th>
-<th>Total</th><th>WIP</th><th>Del</th>
+  <th>Date</th><th>Project</th><th>Crew</th><th>Cost</th>
+  <th>Dig</th><th>Lay</th><th>Back</th><th>Test</th>
+  <th>Total</th><th>WIP</th><th>Del</th>
 </tr>
 </thead>
 <tbody id="log"></tbody>
+<tfoot>
+<tr>
+  <td colspan="8" style="text-align:right;font-weight:600">TOTAL LINEAR FT</td>
+  <td id="tTotalLF" style="font-weight:700">0</td>
+  <td></td><td></td>
+</tr>
+</tfoot>
 </table>
+
 </div>
 
+<!-- ================= FIREBASE + APP LOGIC ================= -->
 <script type="module">
-/* =========================
-   FIREBASE SETUP
-========================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
   getFirestore,
@@ -70,6 +79,7 @@ import {
   orderBy
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+/* 🔐 Firebase Config */
 const firebaseConfig = {
   apiKey: "AIzaSyChNb8zTdAPahDCgTah1W0CRpMS7S9wpI8",
   authDomain: "mc-underground-tracker.firebaseapp.com",
@@ -81,82 +91,54 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const entriesRef = collection(db, "entries");
+const ref = collection(db,"entries");
 
-/* =========================
-   DATA
-========================= */
 let data = [];
 
-/* =========================
-   LOAD DATA
-========================= */
+/* 📥 LOAD DATA */
 async function loadData(){
-  data = [];
-  const q = query(entriesRef, orderBy("date"));
+  const q = query(ref, orderBy("date","desc"));
   const snap = await getDocs(q);
-  snap.forEach(d=>{
-    data.push({ id: d.id, ...d.data() });
-  });
+  data = snap.docs.map(d=>({ id:d.id, ...d.data() }));
   render();
 }
-loadData();
 
-/* =========================
-   SAVE ENTRY
-========================= */
-window.save = async function(){
-  const entry = {
-    date: date.value,
-    project: project.value,
-    crew: crew.value,
-    cost: cost.value,
-    dig:+dig.value||0,
-    lay:+lay.value||0,
-    back:+back.value||0,
-    test:+test.value||0
-  };
-  entry.total = entry.dig+entry.lay+entry.back+entry.test;
-  entry.wip = entry.total;
-
-  await addDoc(entriesRef, entry);
-  loadData();
-};
-
-/* =========================
-   DELETE ENTRY
-========================= */
-window.del = async function(i){
-  const row = data[i];
-  if(!row?.id) return;
-  if(!confirm("Delete this entry?")) return;
-
-  await deleteDoc(doc(db,"entries",row.id));
-  loadData();
-};
-
-/* =========================
-   RENDER
-========================= */
+/* 🧮 RENDER */
 function render(){
-  log.innerHTML="";
-  data.forEach((e,i)=>{
-    log.innerHTML+=`
+  const log = document.getElementById("log");
+  log.innerHTML = "";
+  let total = 0;
+
+  data.forEach(row=>{
+    total += Number(row.total||0);
+    log.innerHTML += `
       <tr>
-        <td>${e.date}</td>
-        <td>${e.project}</td>
-        <td>${e.crew}</td>
-        <td>${e.cost}</td>
-        <td>${e.dig}</td>
-        <td>${e.lay}</td>
-        <td>${e.back}</td>
-        <td>${e.test}</td>
-        <td>${e.total}</td>
-        <td>${e.wip}</td>
-        <td><button class="del" onclick="del(${i})">X</button></td>
+        <td>${row.date}</td>
+        <td>${row.project||""}</td>
+        <td>${row.crew||""}</td>
+        <td>${row.cost||""}</td>
+        <td>${row.dig||0}</td>
+        <td>${row.lay||0}</td>
+        <td>${row.back||0}</td>
+        <td>${row.test||0}</td>
+        <td>${row.total||0}</td>
+        <td>${Number(row.wip||0).toFixed(2)}</td>
+        <td><button class="del" onclick="delRow('${row.id}')">X</button></td>
       </tr>`;
   });
+
+  document.getElementById("tTotalLF").textContent = total;
 }
+
+/* ❌ DELETE */
+window.delRow = async function(id){
+  if(!confirm("Delete entry?")) return;
+  await deleteDoc(doc(db,"entries",id));
+  loadData();
+}
+
+/* 🚀 INIT */
+loadData();
 </script>
 
 </body>
