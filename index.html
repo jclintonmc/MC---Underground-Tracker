@@ -1,84 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Underground Linear FT Tracker</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<style>
-:root{
-  --bg:#0f172a; --card:#111827; --text:#e5e7eb; --muted:#9ca3af;
-  --border:#374151; --primary:#2563eb; --success:#16a34a;
-  --gray:#475569; --danger:#7f1d1d;
-}
-body{margin:0;padding:30px;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--text)}
-.card{max-width:1400px;margin:auto;background:var(--card);border-radius:18px;padding:26px;box-shadow:0 30px 60px rgba(0,0,0,.35)}
-h1{margin:0;font-size:28px}
-.subtitle{color:var(--muted);margin:6px 0 22px}
-.row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
-.col{flex:1;min-width:180px}
-label{font-size:12px;color:var(--muted)}
-input,select{width:100%;padding:11px;border-radius:12px;border:1px solid var(--border);background:#020617;color:var(--text)}
-.datewrap{display:flex;gap:8px;align-items:center}
-.cal{width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:#1f2937;display:flex;align-items:center;justify-content:center;cursor:pointer}
-.btn{padding:11px 20px;border-radius:14px;border:none;cursor:pointer}
-.primary{background:var(--primary);color:white}
-.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:26px}
-.kpi{background:#020617;border-radius:999px;padding:18px;text-align:center}
-.kpi span{font-size:12px;color:var(--muted)}
-.kpi strong{display:block;font-size:22px}
-table{width:100%;border-collapse:collapse;margin-top:26px}
-th,td{border-bottom:1px solid var(--border);padding:10px;text-align:right}
-th:first-child,td:first-child{text-align:left}
-.del{background:#7f1d1d;color:white;border:none;border-radius:10px;padding:6px 10px;cursor:pointer}
-</style>
-</head>
-
-<body>
-<div class="card">
-
-<h1>Underground Linear FT Tracker</h1>
-<div class="subtitle">Live Multi-User Tracking</div>
-
-<div class="row">
-  <div class="col"><label>Date</label><input type="date" id="date"></div>
-  <div class="col"><label>Project</label><input id="project"></div>
-  <div class="col"><label>Crew</label><input id="crew"></div>
-  <div class="col"><label>Cost</label><input id="cost"></div>
-</div>
-
-<div class="row" style="margin-top:14px">
-  <div class="col"><label>Dig</label><input type="number" id="dig"></div>
-  <div class="col"><label>Lay</label><input type="number" id="lay"></div>
-  <div class="col"><label>Backfill</label><input type="number" id="back"></div>
-  <div class="col"><label>Test</label><input type="number" id="test"></div>
-</div>
-
-<div class="row" style="margin-top:18px">
-  <button class="btn primary" onclick="save()">Save</button>
-</div>
-
-<div class="kpis">
-  <div class="kpi"><span>Total Dig</span><strong id="kDig">0</strong></div>
-  <div class="kpi"><span>Total Lay</span><strong id="kLay">0</strong></div>
-  <div class="kpi"><span>Total Backfill</span><strong id="kBack">0</strong></div>
-  <div class="kpi"><span>Total LF</span><strong id="kPhys">0</strong></div>
-  <div class="kpi"><span>WIP</span><strong id="kWip">0</strong></div>
-</div>
-
-<table>
-<thead>
-<tr>
-  <th>Date</th><th>Project</th><th>Crew</th><th>Cost</th>
-  <th>Dig</th><th>Lay</th><th>Back</th><th>Test</th>
-  <th>Total</th><th>WIP</th><th>Del</th>
-</tr>
-</thead>
-<tbody id="log"></tbody>
-</table>
-
-</div>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
@@ -92,6 +11,7 @@ import {
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+/* ================= FIREBASE CONFIG ================= */
 const firebaseConfig = {
   apiKey: "AIzaSyChNb8zTdAPahDCgTah1W0CRpMS7S9wpI8",
   authDomain: "mc-underground-tracker.firebaseapp.com",
@@ -103,55 +23,92 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const ref = collection(db,"entries");
+const ref = collection(db, "entries");
 
-let data=[];
-date.value=new Date().toISOString().split("T")[0];
+/* ================= STATE ================= */
+let data = [];
 
-onSnapshot(query(ref,orderBy("date","asc")), snap=>{
-  data=snap.docs.map(d=>({id:d.id,...d.data()}));
+/* ================= INIT ================= */
+date.value = new Date().toISOString().split("T")[0];
+
+/* ================= REAL-TIME LISTENER ================= */
+onSnapshot(query(ref, orderBy("date", "asc")), snap => {
+  data = snap.docs.map(d => ({
+    id: d.id,
+    ...d.data()
+  }));
   render();
 });
 
-function render(){
-  log.innerHTML="";
-  let td=0,tl=0,tb=0,tp=0,tw=0;
+/* ================= SAVE ================= */
+window.save = async () => {
+  let d = +dig.value || 0;
+  let l = +lay.value || 0;
+  let b = +back.value || 0;
+  let t = +test.value || 0;
 
-  data.forEach(e=>{
-    td+=e.dig; tl+=e.lay; tb+=e.back; tp+=e.total; tw+=e.wip;
-    log.innerHTML+=`
+  let total = d + l + b + t;
+  let wip = total;
+
+  await addDoc(ref, {
+    date: date.value,
+    project: project.value,
+    crew: crew.value || "",
+    cost: cost.value || "",
+    dig: d,
+    lay: l,
+    back: b,
+    test: t,
+    total,
+    wip,
+    created: Date.now()
+  });
+
+  dig.value = lay.value = back.value = test.value = "";
+};
+
+/* ================= DELETE ================= */
+window.del = async i => {
+  const entry = data[i];
+  if (!entry) return;
+  if (!confirm("Delete entry?")) return;
+  await deleteDoc(doc(db, "entries", entry.id));
+};
+
+/* ================= RENDER ================= */
+function render() {
+  log.innerHTML = "";
+  let td = 0, tl = 0, tb = 0, tt = 0, tp = 0, tw = 0;
+
+  data.forEach((e, i) => {
+    td += e.dig;
+    tl += e.lay;
+    tb += e.back;
+    tt += e.test || 0;
+    tp += e.total;
+    tw += e.wip;
+
+    log.innerHTML += `
       <tr>
-        <td>${e.date}</td><td>${e.project}</td><td>${e.crew}</td><td>${e.cost}</td>
-        <td>${e.dig}</td><td>${e.lay}</td><td>${e.back}</td><td>${e.test}</td>
-        <td>${e.total}</td><td>${e.wip}</td>
-        <td><button class="del" onclick="delRow('${e.id}')">X</button></td>
-      </tr>`;
+        <td>${e.date}</td>
+        <td>${e.project}</td>
+        <td>${e.crew}</td>
+        <td>${e.cost}</td>
+        <td>${e.dig}</td>
+        <td>${e.lay}</td>
+        <td>${e.back}</td>
+        <td>${e.test || 0}</td>
+        <td>${e.total}</td>
+        <td>${e.wip.toFixed(2)}</td>
+        <td><button class="del" onclick="del(${i})">X</button></td>
+      </tr>
+    `;
   });
 
-  kDig.textContent=td;
-  kLay.textContent=tl;
-  kBack.textContent=tb;
-  kPhys.textContent=tp;
-  kWip.textContent=tw;
+  kDig.textContent = td;
+  kLay.textContent = tl;
+  kBack.textContent = tb;
+  kPhys.textContent = tp;
+  kWip.textContent = tw.toFixed(2);
 }
-
-window.save=async ()=>{
-  const d=+dig.value||0,l=+lay.value||0,b=+back.value||0,t=+test.value||0;
-  await addDoc(ref,{
-    date:date.value,
-    project:project.value,
-    crew:crew.value,
-    cost:cost.value,
-    dig:d,lay:l,back:b,test:t,
-    total:d+l+b+t,
-    wip:d+l+b+t
-  });
-};
-
-window.delRow=async id=>{
-  if(confirm("Delete?")) await deleteDoc(doc(db,"entries",id));
-};
 </script>
-
-</body>
-</html>
