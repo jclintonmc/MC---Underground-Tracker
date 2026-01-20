@@ -19,14 +19,12 @@ h1{margin:0;font-size:28px}
 .col{flex:1;min-width:180px}
 label{font-size:12px;color:var(--muted)}
 input,select{width:100%;padding:11px;border-radius:12px;border:1px solid var(--border);background:#020617;color:var(--text)}
-.datewrap{display:flex;gap:8px;align-items:center}
-.cal{width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:#1f2937;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .btn{padding:11px 20px;border-radius:14px;border:none;cursor:pointer}
 .primary{background:var(--primary);color:white}
 .success{background:var(--success);color:white}
 .gray{background:var(--gray);color:white}
 .danger{background:var(--danger);color:white}
-.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:26px}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:22px}
 .kpi{background:#020617;border-radius:999px;padding:18px;text-align:center}
 .kpi span{font-size:12px;color:var(--muted)}
 .kpi strong{display:block;font-size:22px}
@@ -36,14 +34,13 @@ th:first-child,td:first-child{text-align:left}
 .del{background:#7f1d1d;color:white;border:none;border-radius:10px;padding:6px 10px;cursor:pointer}
 .mode-box{background:#020617;border:1px solid var(--border);border-radius:14px;padding:12px}
 .mode-box .weights{display:flex;gap:8px;margin-top:8px}
-.cost-manager{margin-top:14px;padding:16px;border-radius:14px;background:#020617;border:1px solid #1f2937}
 </style>
 </head>
 
 <body>
 <div class="card">
 
-<div class="row" style="align-items:flex-start">
+<div class="row">
   <div style="flex:1">
     <h1>Underground Linear FT Tracker</h1>
     <div class="subtitle">Production + Activity-Distributed Progress Tracking</div>
@@ -51,27 +48,22 @@ th:first-child,td:first-child{text-align:left}
 
   <div class="mode-box" style="min-width:320px">
     <label>Entry Mode</label>
-    <select id="mode">
-      <option value="manual">Manual Input</option>
+    <select>
+      <option>Manual Input</option>
+      <option disabled>Weighted Split (future)</option>
     </select>
     <div class="weights">
-      <input readonly value="8">
-      <input readonly value="42">
-      <input readonly value="25">
-      <input readonly value="25">
+      <input value="8" readonly>
+      <input value="42" readonly>
+      <input value="25" readonly>
+      <input value="25" readonly>
     </div>
     <div style="font-size:11px;color:#94a3b8;margin-top:4px">Dig / Lay / Backfill %</div>
   </div>
 </div>
 
 <div class="row" style="margin-top:14px">
-  <div class="col">
-    <label>Date</label>
-    <div class="datewrap">
-      <input type="date" id="date">
-      <div class="cal" onclick="date.showPicker()">📅</div>
-    </div>
-  </div>
+  <div class="col"><label>Date</label><input type="date" id="date"></div>
   <div class="col"><label>Project</label><input id="project"></div>
   <div class="col"><label>Crew Lead</label><input id="crew"></div>
   <div class="col"><label>Cost Code</label><input id="cost" value="CIV-100"></div>
@@ -86,6 +78,15 @@ th:first-child,td:first-child{text-align:left}
 
 <div class="row" style="margin-top:18px">
   <button class="btn primary" onclick="save()">Save Day</button>
+  <button class="btn success" onclick="exportCSV()">Export Filtered</button>
+</div>
+
+<div class="row" style="margin-top:18px">
+  <div class="col"><label>Filter Project</label><input id="fProject"></div>
+  <div class="col"><label>Filter Crew Lead</label><input id="fCrew"></div>
+  <div class="col"><label>Start Date</label><input type="date" id="fStart"></div>
+  <div class="col"><label>End Date</label><input type="date" id="fEnd"></div>
+  <button class="btn gray" onclick="applyFilter()">Apply Filter</button>
 </div>
 
 <div class="kpis">
@@ -109,82 +110,71 @@ th:first-child,td:first-child{text-align:left}
 
 </div>
 
-<!-- 🔥 FIRESTORE REAL-TIME (SAFE VERSION) -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  deleteDoc,
-  doc,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, serverTimestamp } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyChNb8zTdAPahDCgTah1W0CRpMS7S9wpI8",
   authDomain: "mc-underground-tracker.firebaseapp.com",
-  projectId: "mc-underground-tracker",
-  storageBucket: "mc-underground-tracker.firebasestorage.app",
-  messagingSenderId: "214694975194",
-  appId: "1:214694975194:web:de814a7e23074faa37b7e3"
+  projectId: "mc-underground-tracker"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const ref = collection(db,"entries");
 
-date.value = new Date().toISOString().split("T")[0];
+let rows=[];
 
-let data = [];
+date.value=new Date().toISOString().split("T")[0];
 
-const q = query(ref, orderBy("createdAt","asc"));
-
-onSnapshot(q, snap=>{
-  data = snap.docs.map(d=>({id:d.id,...d.data()}));
+onSnapshot(ref,snap=>{
+  rows=snap.docs.map(d=>({id:d.id,...d.data()}));
   render();
-}, err=>{
-  console.error("Firestore error:", err);
 });
-
-window.save = async ()=>{
-  const d=+dig.value||0,l=+lay.value||0,b=+back.value||0,t=+test.value||0;
-  await addDoc(ref,{
-    createdAt: serverTimestamp(),
-    date: date.value,
-    project: project.value,
-    crew: crew.value,
-    cost: cost.value,
-    dig:d,lay:l,back:b,test:t,
-    total:d+l+b+t,
-    wip:d+l+b+t
-  });
-};
-
-window.delRow = async id=>{
-  if(confirm("Delete entry?")) await deleteDoc(doc(db,"entries",id));
-};
 
 function render(){
   log.innerHTML="";
-  let td=0,tl=0,tb=0,tp=0,tw=0;
-  data.forEach(e=>{
-    td+=e.dig; tl+=e.lay; tb+=e.back; tp+=e.total; tw+=e.wip;
+  let td=0,tl=0,tb=0,tp=0;
+  rows.forEach(r=>{
+    td+=r.dig; tl+=r.lay; tb+=r.back; tp+=r.total;
     log.innerHTML+=`
     <tr>
-      <td>${e.date}</td><td>${e.project}</td><td>${e.crew}</td><td>${e.cost}</td>
-      <td>${e.dig}</td><td>${e.lay}</td><td>${e.back}</td><td>${e.test}</td>
-      <td>${e.total}</td><td>${e.wip.toFixed(2)}</td>
-      <td><button class="del" onclick="delRow('${e.id}')">X</button></td>
+      <td>${r.date}</td><td>${r.project}</td><td>${r.crew}</td><td>${r.cost}</td>
+      <td>${r.dig}</td><td>${r.lay}</td><td>${r.back}</td><td>${r.test}</td>
+      <td>${r.total}</td><td>${r.total}</td>
+      <td><button class="del" onclick="del('${r.id}')">X</button></td>
     </tr>`;
   });
-  kDig.textContent=td; kLay.textContent=tl; kBack.textContent=tb;
-  kPhys.textContent=tp; kWip.textContent=tw.toFixed(2);
+  kDig.textContent=td;
+  kLay.textContent=tl;
+  kBack.textContent=tb;
+  kPhys.textContent=tp;
+  kWip.textContent=tp;
 }
-</script>
 
+window.save=async()=>{
+  try{
+    const d=+dig.value||0,l=+lay.value||0,b=+back.value||0,t=+test.value||0;
+    await addDoc(ref,{
+      createdAt:serverTimestamp(),
+      date:date.value,project:project.value,crew:crew.value,cost:cost.value,
+      dig:d,lay:l,back:b,test:t,total:d+l+b+t
+    });
+  }catch(e){
+    alert("Firestore error — check rules");
+    console.error(e);
+  }
+};
+
+window.del=async id=>{
+  if(confirm("Delete entry?")) await deleteDoc(doc(db,"entries",id));
+};
+
+window.applyFilter=()=>render();
+window.exportCSV=()=>alert("Export coming next");
+
+</script>
 </body>
 </html>
