@@ -23,9 +23,6 @@ input,select{width:100%;padding:11px;border-radius:12px;border:1px solid var(--b
 .cal{width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:#1f2937;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .btn{padding:11px 20px;border-radius:14px;border:none;cursor:pointer}
 .primary{background:var(--primary);color:white}
-.success{background:var(--success);color:white}
-.gray{background:var(--gray);color:white}
-.danger{background:var(--danger);color:white}
 .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:26px}
 .kpi{background:#020617;border-radius:999px;padding:18px;text-align:center}
 .kpi span{font-size:12px;color:var(--muted)}
@@ -34,79 +31,39 @@ table{width:100%;border-collapse:collapse;margin-top:26px}
 th,td{border-bottom:1px solid var(--border);padding:10px;text-align:right}
 th:first-child,td:first-child{text-align:left}
 .del{background:#7f1d1d;color:white;border:none;border-radius:10px;padding:6px 10px;cursor:pointer}
-.mode-box{background:#020617;border:1px solid var(--border);border-radius:14px;padding:12px}
-.mode-box .weights{display:flex;gap:8px;margin-top:8px}
-.cost-manager{margin-top:14px;padding:16px;border-radius:14px;background:#020617;border:1px solid #1f2937}
 </style>
 </head>
 
 <body>
 <div class="card">
 
-<div class="row" style="align-items:flex-start">
-  <div style="flex:1">
-    <h1>Underground Linear FT Tracker</h1>
-    <div class="subtitle">Production + Activity-Distributed Progress Tracking</div>
-  </div>
+<h1>Underground Linear FT Tracker</h1>
+<div class="subtitle">Live Multi-User Tracking</div>
 
-  <div class="mode-box" style="min-width:320px">
-    <label>Entry Mode</label>
-    <select id="mode" onchange="toggleMode()">
-      <option value="manual">Manual Input</option>
-      <option value="weighted">Weighted Split</option>
-    </select>
-    <div class="weights">
-      <input id="wTest" readonly>
-      <input id="wDig" readonly>
-      <input id="wLay" readonly>
-      <input id="wBack" readonly>
-    </div>
-    <div style="font-size:11px;color:#94a3b8;margin-top:4px">Dig / Lay / Backfill %</div>
-  </div>
+<div class="row">
+  <div class="col"><label>Date</label><input type="date" id="date"></div>
+  <div class="col"><label>Project</label><input id="project"></div>
+  <div class="col"><label>Crew</label><input id="crew"></div>
+  <div class="col"><label>Cost</label><input id="cost"></div>
 </div>
 
 <div class="row" style="margin-top:14px">
-  <div class="col">
-    <label>Date</label>
-    <div class="datewrap">
-      <input type="date" id="date">
-      <div class="cal" onclick="date.showPicker()">📅</div>
-    </div>
-  </div>
-
-  <div class="col">
-    <label>Project</label>
-    <input id="project">
-  </div>
-
-  <div class="col">
-    <label>Crew Lead</label>
-    <input id="crew">
-  </div>
-
-  <div class="col">
-    <label>Cost Code</label>
-    <select id="cost"></select>
-  </div>
-</div>
-
-<div class="row" style="margin-top:14px">
-  <div class="col"><label id="digLabel">Dig LF</label><input type="number" id="dig"></div>
-  <div class="col"><label>Lay LF</label><input type="number" id="lay"></div>
-  <div class="col"><label>Backfill LF</label><input type="number" id="back"></div>
-  <div class="col"><label>Tested LF</label><input type="number" id="test"></div>
+  <div class="col"><label>Dig</label><input type="number" id="dig"></div>
+  <div class="col"><label>Lay</label><input type="number" id="lay"></div>
+  <div class="col"><label>Backfill</label><input type="number" id="back"></div>
+  <div class="col"><label>Test</label><input type="number" id="test"></div>
 </div>
 
 <div class="row" style="margin-top:18px">
-  <button class="btn primary" onclick="save()">Save Day</button>
+  <button class="btn primary" onclick="save()">Save</button>
 </div>
 
 <div class="kpis">
   <div class="kpi"><span>Total Dig</span><strong id="kDig">0</strong></div>
   <div class="kpi"><span>Total Lay</span><strong id="kLay">0</strong></div>
   <div class="kpi"><span>Total Backfill</span><strong id="kBack">0</strong></div>
-  <div class="kpi"><span>Total Physical LF</span><strong id="kPhys">0</strong></div>
-  <div class="kpi"><span>Total Progress LF</span><strong id="kWip">0</strong></div>
+  <div class="kpi"><span>Total LF</span><strong id="kPhys">0</strong></div>
+  <div class="kpi"><span>WIP</span><strong id="kWip">0</strong></div>
 </div>
 
 <table>
@@ -122,18 +79,17 @@ th:first-child,td:first-child{text-align:left}
 
 </div>
 
-<!-- ================= FIREBASE + LOGIC ================= -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
   getFirestore,
   collection,
   addDoc,
-  getDocs,
   deleteDoc,
   doc,
   query,
-  orderBy
+  orderBy,
+  onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -150,57 +106,51 @@ const db = getFirestore(app);
 const ref = collection(db,"entries");
 
 let data=[];
+date.value=new Date().toISOString().split("T")[0];
 
-date.value=new Date().toISOString().split('T')[0];
-
-async function loadData(){
-  const q=query(ref,orderBy("date","asc"));
-  const snap=await getDocs(q);
+onSnapshot(query(ref,orderBy("date","asc")), snap=>{
   data=snap.docs.map(d=>({id:d.id,...d.data()}));
   render();
-}
+});
 
 function render(){
   log.innerHTML="";
   let td=0,tl=0,tb=0,tp=0,tw=0;
+
   data.forEach(e=>{
     td+=e.dig; tl+=e.lay; tb+=e.back; tp+=e.total; tw+=e.wip;
     log.innerHTML+=`
       <tr>
         <td>${e.date}</td><td>${e.project}</td><td>${e.crew}</td><td>${e.cost}</td>
         <td>${e.dig}</td><td>${e.lay}</td><td>${e.back}</td><td>${e.test}</td>
-        <td>${e.total}</td><td>${e.wip.toFixed(2)}</td>
+        <td>${e.total}</td><td>${e.wip}</td>
         <td><button class="del" onclick="delRow('${e.id}')">X</button></td>
       </tr>`;
   });
-  kDig.textContent=td; kLay.textContent=tl; kBack.textContent=tb;
-  kPhys.textContent=tp; kWip.textContent=tw.toFixed(2);
-}
 
-window.delRow=async id=>{
-  if(!confirm("Delete entry?"))return;
-  await deleteDoc(doc(db,"entries",id));
-  loadData();
-};
+  kDig.textContent=td;
+  kLay.textContent=tl;
+  kBack.textContent=tb;
+  kPhys.textContent=tp;
+  kWip.textContent=tw;
+}
 
 window.save=async ()=>{
   const d=+dig.value||0,l=+lay.value||0,b=+back.value||0,t=+test.value||0;
-  const total=d+l+b+t;
-  const wip=total;
-
   await addDoc(ref,{
     date:date.value,
     project:project.value,
     crew:crew.value,
     cost:cost.value,
     dig:d,lay:l,back:b,test:t,
-    total,wip
+    total:d+l+b+t,
+    wip:d+l+b+t
   });
-
-  loadData();
 };
 
-loadData();
+window.delRow=async id=>{
+  if(confirm("Delete?")) await deleteDoc(doc(db,"entries",id));
+};
 </script>
 
 </body>
