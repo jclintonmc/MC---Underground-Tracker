@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Underground Linear FT Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+  --bg:#0f172a; --card:#111827; --text:#e5e7eb; --muted:#9ca3af;
+  --border:#374151; --primary:#2563eb; --success:#16a34a;
+  --gray:#475569; --danger:#7f1d1d;
+}
+body{margin:0;padding:30px;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--text)}
+.card{max-width:1400px;margin:auto;background:var(--card);border-radius:18px;padding:26px;box-shadow:0 30px 60px rgba(0,0,0,.35)}
+h1{margin:0;font-size:28px}
+.subtitle{color:var(--muted);margin:6px 0 22px}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+.col{flex:1;min-width:180px}
+label{font-size:12px;color:var(--muted)}
+input,select{width:100%;padding:11px;border-radius:12px;border:1px solid var(--border);background:#020617;color:var(--text)}
+.datewrap{display:flex;gap:8px;align-items:center}
+.cal{
+  width:44px;height:44px;border-radius:12px;
+  border:1px solid var(--border);
+  background:#1f2937;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:18px;
+}
+.btn{padding:11px 20px;border-radius:14px;border:none;cursor:pointer}
+.primary{background:var(--primary);color:white}
+.success{background:var(--success);color:white}
+.gray{background:var(--gray);color:white}
+.danger{background:var(--danger);color:white}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:26px}
+.kpi{background:#020617;border-radius:999px;padding:18px;text-align:center}
+.kpi span{font-size:12px;color:var(--muted)}
+.kpi strong{display:block;font-size:22px}
+table{width:100%;border-collapse:collapse;margin-top:26px}
+th,td{border-bottom:1px solid var(--border);padding:10px;text-align:right}
+th:first-child,td:first-child{text-align:left}
+.del{background:#7f1d1d;color:white;border:none;border-radius:10px;padding:6px 10px;cursor:pointer}
+.mode-box{background:#020617;border:1px solid var(--border);border-radius:14px;padding:12px}
+.mode-box .weights{display:flex;gap:8px;margin-top:8px}
+.cost-manager{margin-top:14px;padding:16px;border-radius:14px;background:#020617;border:1px solid #1f2937}
+</style>
+</head>
+
+<body>
+<div class="card">
+
+<div class="row" style="align-items:flex-start">
+  <div style="flex:1">
+    <h1>Underground Linear FT Tracker</h1>
+    <div class="subtitle">Production + Activity-Distributed Progress Tracking</div>
+  </div>
+
+  <div class="mode-box" style="min-width:320px">
+    <label>Entry Mode</label>
+    <select id="mode" onchange="toggleMode()">
+      <option value="manual">Manual Input</option>
+      <option value="weighted">Weighted Split</option>
+    </select>
+    <div class="weights">
+      <input id="wTest" readonly>
+      <input id="wDig" readonly>
+      <input id="wLay" readonly>
+      <input id="wBack" readonly>
+    </div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:4px">Dig / Lay / Backfill %</div>
+  </div>
+</div>
+
+<div class="row" style="margin-top:14px">
+  <div class="col">
+    <label>Date</label>
+    <div class="datewrap">
+      <input type="date" id="date">
+      <div class="cal" onclick="date.showPicker()">📅</div>
+    </div>
+  </div>
+
+  <div class="col">
+    <label>Project</label>
+    <input id="project" onchange="applyProjectDefault()">
+  </div>
+
+  <div class="col">
+    <label>Crew Lead</label>
+    <input id="crew">
+  </div>
+
+  <div class="col">
+    <label>Cost Code</label>
+    <div style="display:flex;gap:8px">
+      <select id="cost" onchange="applyCostCode()"></select>
+      <button class="btn gray" onclick="toggleManager()">⚙</button>
+    </div>
+  </div>
+</div>
+
+<div id="manager" class="cost-manager" style="display:none">
+  <div class="row">
+    <div class="col"><label>Cost Code</label><input id="ccCode"></div>
+    <div class="col"><label>Dig %</label><input id="ccDig" type="number"></div>
+    <div class="col"><label>Lay %</label><input id="ccLay" type="number"></div>
+    <div class="col"><label>Backfill %</label><input id="ccBack" type="number"></div>
+    <div class="col"><label>Tested %</label><input id="ccTest" type="number"></div>
+    <div class="col"><label>Default Project</label><input id="ccProject"></div>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn primary" onclick="saveCostCode()">Save / Update</button>
+    <button class="btn danger" onclick="deleteCostCode()">Delete</button>
+  </div>
+</div>
+
+<div class="row" style="margin-top:14px">
+  <div class="col"><label id="digLabel">Dig LF</label><input type="number" id="dig"></div>
+  <div class="col"><label>Lay LF</label><input type="number" id="lay"></div>
+  <div class="col"><label>Backfill LF</label><input type="number" id="back"></div>
+  <div class="col"><label>Tested LF</label><input type="number" id="test"></div>
+</div>
+
+<div class="row" style="margin-top:18px">
+  <button class="btn primary" onclick="save()">Save Day</button>
+  <button class="btn success" onclick="exportCSV()">Export Filtered</button>
+
+<!-- FILTER BAR -->
+<div class="row" style="margin-top:22px">
+  <div class="col">
+    <label>Filter Project</label>
+    <select id="filterProject"></select>
+  </div>
+
+  <div class="col">
+    <label>Filter Crew Lead</label>
+    <input id="filterCrew" placeholder="Crew Lead Name">
+  </div>
+
+  <div class="col">
+    <label>Start Date</label>
+    <div class="datewrap">
+      <input type="date" id="filterStart">
+      <div class="cal" onclick="filterStart.showPicker()">📅</div>
+    </div>
+  </div>
+
+  <div class="col">
+    <label>End Date</label>
+    <div class="datewrap">
+      <input type="date" id="filterEnd">
+      <div class="cal" onclick="filterEnd.showPicker()">📅</div>
+    </div>
+  </div>
+
+  <div class="col" style="max-width:160px">
+    <button class="btn gray" style="margin-top:22px" onclick="applyFilters()">Apply Filter</button>
+  </div>
+</div>
+
+
+<div class="kpis">
+  <div class="kpi"><span>Total Dig</span><strong id="kDig">0</strong></div>
+  <div class="kpi"><span>Total Lay</span><strong id="kLay">0</strong></div>
+  <div class="kpi"><span>Total Backfill</span><strong id="kBack">0</strong></div>
+  <div class="kpi"><span>Total Physical LF</span><strong id="kPhys">0</strong></div>
+  <div class="kpi"><span>Total Progress LF</span><strong id="kWip">0</strong></div>
+</div>
+
+<table>
+<thead>
+<tr>
+  <th>Date</th><th>Project</th><th>Crew Lead</th><th>Cost</th>
+  <th>Dig</th><th>Lay</th><th>Backfill</th><th>Tested</th>
+  <th>Total LF</th><th>WIP</th><th>Delete</th>
+</tr>
+</thead>
+<tbody id="log"></tbody>
+<tfoot>
+<tr>
+  <td colspan="7" style="text-align:right;font-weight:600">TOTAL LINEAR FT</td>
+  <td id="tTotalLF" style="font-weight:700">0</td>
+  <td></td>
+  <td></td>
+</tr>
+</tfoot>
+</table>
+
+</div>
+
+<script>
+date.value=new Date().toISOString().split('T')[0];
+
+let costCodes=JSON.parse(localStorage.getItem('ug_cost_codes')||'{"CIV-100":{"dig":42,"lay":25,"back":25,"test":8}}');
+let projectDefaults=JSON.parse(localStorage.getItem('ug_project_defaults')||'{}');
+let data=JSON.parse(localStorage.getItem('ug_tracker')||'[]');
+let filteredData=[...data];
+
+function toggleMode(){
+  const weighted=mode.value==='weighted';
+  lay.disabled=weighted; back.disabled=weighted;
+  digLabel.textContent=weighted?'Dig LF (TOTAL)':'Dig LF';
+}
+
+function populateCostCodes(){
+  cost.innerHTML='';
+  Object.keys(costCodes).forEach(c=>cost.innerHTML+=`<option>${c}</option>`);
+  applyCostCode();
+}
+
+function applyCostCode(){
+  const cfg=costCodes[cost.value];
+  if(!cfg)return;
+  wDig.value=cfg.dig; wLay.value=cfg.lay; wBack.value=cfg.back; wTest.value=cfg.test||0;
+}
+
+function toggleManager(){
+  manager.style.display = manager.style.display === 'none' ? 'block' : 'none';
+}
+
+function saveCostCode(){
+  const c=ccCode.value.trim(),d=+ccDig.value,l=+ccLay.value,b=+ccBack.value;
+  const t=+ccTest.value;
+  if(d+l+b+t!==100)return alert("Must total 100%");
+  costCodes[c]={dig:d,lay:l,back:b,test:t};
+  if(ccProject.value)projectDefaults[ccProject.value]=c;
+  localStorage.setItem('ug_cost_codes',JSON.stringify(costCodes));
+  localStorage.setItem('ug_project_defaults',JSON.stringify(projectDefaults));
+  populateCostCodes();
+  toggleManager();
+}
+
+function deleteCostCode(){
+  if(!confirm('Delete cost code?'))return;
+  delete costCodes[ccCode.value];
+  localStorage.setItem('ug_cost_codes',JSON.stringify(costCodes));
+  populateCostCodes();
+  toggleManager();
+}
+
+function applyProjectDefault(){
+  if(projectDefaults[project.value]){
+    cost.value=projectDefaults[project.value];
+    applyCostCode();
+  }
+}
+
+function save(){
+  let d=+dig.value||0,l=+lay.value||0,b=+back.value||0,t=+test.value||0,wip=0;
+  if(mode.value==='weighted'){
+    const cfg=costCodes[cost.value];
+    l=+(d*cfg.lay/100).toFixed(2);
+    b=+(d*cfg.back/100).toFixed(2);
+    lay.value=l; back.value=b;
+    t=+(d*cfg.test/100).toFixed(2);
+    test.value=t;
+    wip=d+l+b+t;
+  } else {
+    wip=d*(wDig.value/100)+l*(wLay.value/100)+b*(wBack.value/100)+t*(wTest.value/100);
+  }
+  data.push({date:date.value,project:project.value,crew:crew.value||'',cost:cost.value,dig:d,lay:l,back:b,test:t,total:d+l+b+t,wip});
+  localStorage.setItem('ug_tracker',JSON.stringify(data));
+  populateProjectFilter();
+  applyFilters();
+}
+
+function populateProjectFilter(){
+  filterProject.innerHTML='<option value="ALL">All Projects</option>';
+  [...new Set(data.map(d=>d.project).filter(Boolean))]
+    .forEach(p=>filterProject.innerHTML+=`<option>${p}</option>`);
+}
+
+function applyFilters(){
+  filteredData=data.filter(d=>{
+    if(filterProject.value!=='ALL' && d.project!==filterProject.value) return false;
+    if(filterCrew.value && !d.crew.toLowerCase().includes(filterCrew.value.toLowerCase())) return false;
+    if(filterStart.value && d.date < filterStart.value) return false;
+    if(filterEnd.value && d.date > filterEnd.value) return false;
+    return true;
+  });
+  render();
+}
+
+function render(){
+  log.innerHTML='';
+  let td=0,tl=0,tb=0,tt=0,tp=0,tw=0;
+  filteredData.forEach((e,i)=>{
+    td+=e.dig; tl+=e.lay; tb+=e.back; tt+=e.test||0; tp+=e.total; tw+=e.wip;
+    log.innerHTML+=`<tr>
+      <td>${e.date}</td><td>${e.project}</td><td>${e.crew}</td><td>${e.cost}</td>
+      <td>${e.dig}</td><td>${e.lay}</td><td>${e.back}</td><td>${e.test||0}</td>
+      <td>${e.total}</td><td>${e.wip.toFixed(2)}</td>
+      <td><button class="del" onclick="del(${i})">X</button></td>
+    </tr>`;
+  });
+  kDig.textContent=td; kLay.textContent=tl; kBack.textContent=tb;
+  kPhys.textContent=tp; 
+  kWip.textContent=tw.toFixed(2);
+  if (typeof tTotalLF !== 'undefined') {
+    tTotalLF.textContent = tp;
+  }
+}
+
+function del(i){
+  data.splice(i,1);
+  localStorage.setItem('ug_tracker',JSON.stringify(data));
+  populateProjectFilter();
+  applyFilters();
+}
+
+function exportCSV(){
+  const today=new Date().toISOString().split('T')[0];
+  const proj=project.value?project.value.replace(/\s+/g,'_'):'ALL';
+  let csv='Date,Project,Crew Lead,Cost,Dig,Lay,Backfill,Tested,TotalLF,Distributed_Progress_LF\n';
+  filteredData.forEach(e=>csv+=`${e.date},${e.project},${e.crew||''},${e.cost},${e.dig},${e.lay},${e.back},${e.test||0},${e.total},${e.wip}\n`);
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=`Underground_Linear_FT_Progress_${proj}_${today}.csv`;
+  a.click();
+}
+
+populateCostCodes(); populateProjectFilter(); toggleMode(); applyFilters();
+</script>
+
+<!-- Firebase (Shared Data - Option A: Open Access) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import {
+    getFirestore,
+    collection,
+    addDoc,
+    getDocs,
+    query,
+    orderBy
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyChNb8zTdAPahDCgTah1W0CRpMS7S9wpI8",
+    authDomain: "mc-underground-tracker.firebaseapp.com",
+    projectId: "mc-underground-tracker",
+    storageBucket: "mc-underground-tracker.firebasestorage.app",
+    messagingSenderId: "214694975194",
+    appId: "1:214694975194:web:de814a7e23074faa37b7e3"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  window.firebaseDB = {
+    db,
+    collection,
+    addDoc,
+    getDocs,
+    query,
+    orderBy
+  };
+</script>
+
+</body>
+</html>
